@@ -1,0 +1,988 @@
+import React, { useState, useEffect, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import * as Lucide from "lucide-react";
+import { router } from '@inertiajs/react';
+
+// Components
+import { Sidebar } from "../../Components/dashboard/Sidebar";
+import { PACKAGES } from "../../constants/packages";
+import { Header } from "../../Components/dashboard/Header";
+import { KPICards } from "../../Components/dashboard/KPICards";
+import { AnalyticsCharts, FullAnalytics } from "../../Components/dashboard/AnalyticsCharts";
+import { RegistrationTable } from "../../Components/dashboard/RegistrationTable";
+import { PDFPreviewModal, DetailsModal, ConfirmDeleteModal, EditRegistrationModal } from "../../Components/dashboard/Modals";
+import { CustomersView } from "../../Components/dashboard/CustomersView";
+import { ErrorBoundary } from "../../Components/ErrorBoundary";
+import { GeographicalView } from "../../Components/dashboard/GeographicalView";
+import { VillageFundChart } from "../../Components/dashboard/VillageFundChart";
+import { SettingsView } from "../../Components/dashboard/SettingsView";
+
+// Utils & Types
+import { RegistrationData, DashboardStats } from "../../types";
+import { normalizeRow, calculateStats, exportToExcel, generatePDFBlobUrl, downloadPDF } from "../../utils/dashboardUtils";
+
+// --- Komponen Custom Dropdown ---
+const CustomPaketDropdown = ({ value, onChange, options }: { value: string, onChange: (v: string) => void, options: { name: string }[] }) => {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  const getPaketStyle = (name: string) => {
+    const lower = name.toLowerCase();
+    if (lower.includes('30.mbps')) return { color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100', icon: Lucide.Zap };
+    if (lower.includes('paket')) return { color: 'text-[#F47920]', bg: 'bg-orange-50', border: 'border-orange-100', icon: Lucide.Users };
+    if (lower.includes('20.mbps')) return { color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100', icon: Lucide.Activity };
+    if (lower.includes('50.mbps')) return { color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', icon: Lucide.Rocket };
+    return { color: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-100', icon: Lucide.Box };
+  };
+
+  const selectedStyle = value ? getPaketStyle(value) : { color: 'text-slate-700', bg: 'bg-white', border: 'border-slate-200', icon: Lucide.Filter };
+
+  return (
+    <div className="relative w-full md:w-64" ref={containerRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full flex items-center justify-between p-3 rounded-2xl border-2 ${selectedStyle.border} ${selectedStyle.bg} transition-all duration-200 shadow-sm outline-none focus:border-[#0d1655]`}
+      >
+        <div className="flex items-center gap-2">
+          <selectedStyle.icon size={18} className={selectedStyle.color} />
+          <span className={`text-sm font-bold ${selectedStyle.color}`}>
+            {value || "Semua Paket"}
+          </span>
+        </div>
+        <Lucide.ChevronDown size={18} className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''} ${selectedStyle.color}`} />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+            className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-100 p-2 z-[100]"
+          >
+            <button
+              onClick={() => { onChange(""); setIsOpen(false); }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${!value ? 'bg-slate-50' : 'hover:bg-slate-50'}`}
+            >
+              <Lucide.LayoutGrid size={18} className="text-slate-400" />
+              <span className="text-sm font-bold text-slate-600">Semua Paket</span>
+            </button>
+            <div className="h-px bg-slate-100 my-1 mx-2" />
+            <div className="space-y-1 max-h-[250px] overflow-y-auto custom-scrollbar">
+              {options.map((opt) => {
+                const style = getPaketStyle(opt.name);
+                const isSelected = value === opt.name;
+                return (
+                  <button
+                    key={opt.name}
+                    onClick={() => { onChange(opt.name); setIsOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isSelected ? style.bg : 'hover:bg-slate-50'}`}
+                  >
+                    <style.icon size={18} className={style.color} />
+                    <span className={`text-sm font-bold ${style.color}`}>
+                      {(() => {
+                        const match = opt.name.match(/(\d+)\s*Mbps/i);
+                        return match ? `${match[1]} Mbps` : opt.name;
+                      })()}
+                    </span>
+                    {isSelected && <Lucide.Check size={16} className={`ml-auto ${style.color}`} />}
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+// AUDIT FIX: Google Script URL DIHAPUS - semua data dari PostgreSQL backend
+// normalizeRow diimpor dari dashboardUtils.ts
+const extractPrice = (paket: string, packages: typeof PACKAGES): number => {
+  for (const pkg of packages) {
+    const pkgLabel = pkg.label.toLowerCase();
+    const pkgSpeed = pkg.speed.toLowerCase();
+    if (paket.toLowerCase().includes(pkgLabel) || paket.toLowerCase().includes(pkgSpeed)) {
+      return parseInt(pkg.price.replace(/\./g, ''));
+    }
+  }
+  return 115000;
+};
+
+// --- Komponen Utama Dashboard ---
+export default function Dashboard({ userRole = "admin", user, initialCustomers, initialKpiStats, filters, packages = [], villages = [], users = [], notifications = [], unreadCount = 0 }: any) {
+  const handleLogout = () => {
+    router.post('/logout');
+  };
+  const [data, setData] = useState<RegistrationData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState(filters?.search || "");
+  const [selectedReg, setSelectedReg] = useState<RegistrationData | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+
+  const showToast = (type: 'success' | 'error', message: string) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 4000);
+  };
+  const [activeTab, setActiveTab] = useState("Overview");
+  const [filterPaket, setFilterPaket] = useState("");
+  const [hasLegacyData, setHasLegacyData] = useState(false);
+
+  useEffect(() => {
+    try {
+      const legacyData = localStorage.getItem('adminData');
+      if (legacyData && legacyData !== "[]" && JSON.parse(legacyData).length > 0) {
+        setHasLegacyData(true);
+      }
+    } catch { }
+  }, []);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [editingReg, setEditingReg] = useState<RegistrationData | null>(null);
+  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [filterStatus, setFilterStatus] = useState(filters?.status || "");
+  const [filterMbps, setFilterMbps] = useState("");
+  const [filterDesa, setFilterDesa] = useState("");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
+  // notifications and unreadCount handled via props now
+  const [showNotif, setShowNotif] = useState(false);
+  const [lastCount, setLastCount] = useState(0);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [kpiStats, setKpiStats] = useState<any>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
+
+  useEffect(() => {
+    if (initialCustomers && initialCustomers.data) {
+      const fetchedData = initialCustomers.data.map(normalizeRow);
+      setData(fetchedData);
+    }
+    if (initialKpiStats) {
+      setKpiStats(initialKpiStats);
+    }
+    setLoading(false);
+  }, [initialCustomers, initialKpiStats]);
+
+  const silentRefresh = () => {
+    setIsRefreshing(true);
+    router.reload({
+      only: ['initialCustomers', 'initialKpiStats'],
+      onSuccess: () => {
+        setLastRefresh(new Date());
+        setIsRefreshing(false);
+      },
+      onError: () => {
+        setIsRefreshing(false);
+      }
+    });
+  };
+
+  const handleImportLegacyData = async () => {
+    showToast("error", "Fitur Impor di nonaktifkan pada arsitektur baru ini.");
+  };
+
+
+  const handleUpdateStatus = (timestamp: string, newStatus: string) => {
+    if (userRole !== "superadmin") {
+      showToast("error", "Akses ditolak: Hanya Superadmin yang bisa mengubah status.");
+      return;
+    }
+    const item = data.find(r => r.timestamp === timestamp);
+    if (item?.id !== undefined) {
+      router.patch(`/admin/customers/${item.id}/status`, { status: newStatus }, {
+        preserveScroll: true,
+        onSuccess: () => showToast("success", "Status berhasil diubah!"),
+        onError: () => showToast("error", "Gagal mengubah status di database.")
+      });
+    } else {
+      showToast("error", "Data tidak valid untuk diupdate.");
+    }
+  };
+
+  const handleDelete = (timestamp: string) => {
+    if (userRole !== "superadmin") {
+      showToast("error", "Akses ditolak: Hanya Superadmin yang bisa menghapus data.");
+      setConfirmDelete(null);
+      return;
+    }
+    const item = data.find(r => r.timestamp === timestamp);
+    if (item?.id !== undefined) {
+      router.delete(`/admin/customers/${item.id}`, {
+        preserveScroll: true,
+        onSuccess: () => {
+          setConfirmDelete(null);
+          showToast("success", "Data berhasil dihapus!");
+        },
+        onError: () => showToast("error", "Terjadi kesalahan saat menghapus data.")
+      });
+    } else {
+      showToast("error", "Data tidak valid untuk dihapus.");
+    }
+  };
+
+  const handleSaveEdit = (updatedItem: RegistrationData) => {
+    if (userRole !== "superadmin") {
+      showToast("error", "Akses ditolak: Hanya Superadmin yang bisa menyimpan perubahan.");
+      return;
+    }
+
+    const isNewRecord = !updatedItem.timestamp || updatedItem.timestamp.includes("baru") || !data.some(d => d.timestamp === updatedItem.timestamp);
+
+    const villageMap: Record<string, number> = {
+      'GUMELAR': 1, 'CIHONJE': 2, 'TLAGA': 3, 'SAMUDRA': 4, 'SAMUDRA KULON': 5,
+      'CILANGKAP': 6, 'PANINGKABAN': 7, 'KARANG KEMOJING': 8, 'GANCANG': 9, 'KEDUNG URANG': 10
+    };
+    
+    const packageMap: Record<string, number> = {
+      'PAKET STARTER': 1, 'PAKET BASIC': 2, 'PAKET STANDARD': 3, 'PAKET PREMIUM': 4, 'PAKET ULTRA': 5
+    };
+
+    const getVillageId = (desa: string) => villageMap[(desa || "").toUpperCase()] || updatedItem.village_id || 1;
+    const getPackageId = (paket: string) => {
+      const p = (paket || "").toUpperCase();
+      for (const [key, id] of Object.entries(packageMap)) {
+        if (p.includes(key)) return id;
+      }
+      return updatedItem.package_id || 1;
+    };
+
+    const backendVillageId = getVillageId(updatedItem.desa || "");
+    const backendPackageId = getPackageId(updatedItem.paket || "");
+
+    let backendStatus = (updatedItem.status || "PENGAJUAN").toLowerCase();
+    const statusUpper = (updatedItem.status || "PENGAJUAN").toUpperCase();
+    if (statusUpper === "AKTIF") backendStatus = "active";
+    if (statusUpper === "NON AKTIF" || statusUpper === "BERHENTI BERLANGGANAN") backendStatus = "suspended";
+    if (statusUpper === "PENGAJUAN" || statusUpper === "SURVEI" || statusUpper === "PROSES PASANG") backendStatus = "pending";
+    if (statusUpper === "BATAL") backendStatus = "deleted";
+
+    const dbRecord: Record<string, unknown> = {
+      name: updatedItem.nama_lengkap || "",
+      phone: updatedItem.no_hp_wa || "",
+      address: updatedItem.alamat_pemasangan || "",
+      village_id: backendVillageId,
+      package_id: backendPackageId,
+      nik: updatedItem.nik || "",
+      kecamatan: updatedItem.kecamatan || "GUMELAR",
+      rw: updatedItem.rw || "",
+      rt: updatedItem.rt || "",
+      status: backendStatus,
+      current_provider: updatedItem.provider_saat_ini || "Belum Pernah Pasang",
+      source_info: updatedItem.sumber_info || "",
+      link_google_maps: updatedItem.link_google_maps || "",
+      foto_ktp: updatedItem.foto_ktp || "",
+      notes: updatedItem.catatan || "",
+      tanggal_aktif: updatedItem.tanggal_aktif || "",
+      tanggal_rencana_pasang: updatedItem.tanggal_rencana_pasang || "",
+    };
+
+    if (isNewRecord) {
+      router.post('/admin/customers', dbRecord as any, {
+        preserveScroll: true,
+        onSuccess: () => {
+          setEditingReg(null);
+          setIsAddingNew(false);
+          showToast("success", "Data pendaftaran berhasil ditambahkan!");
+        },
+        onError: () => showToast("error", "Gagal menyimpan ke database.")
+      });
+    } else if (updatedItem.id !== undefined) {
+      router.put(`/admin/customers/${updatedItem.id}`, dbRecord as any, {
+        preserveScroll: true,
+        onSuccess: () => {
+          setEditingReg(null);
+          setIsAddingNew(false);
+          showToast("success", "Data pendaftaran berhasil diperbarui!");
+        },
+        onError: () => showToast("error", "Gagal memperbarui ke database.")
+      });
+    } else {
+      showToast("error", "Item tidak memiliki ID yang valid.");
+    }
+  };
+
+  const handleAddNew = () => {
+    const newEntry: RegistrationData = {
+      timestamp: "baru-" + Date.now(),
+      nama_lengkap: "", no_hp_wa: "", alamat_pemasangan: "",
+      provider_saat_ini: "Belum Pernah Pasang", sumber_info: "Rekomendasi Teman",
+      paket: "PAKET_1 (20 Mbps) - Rp 115.000/Bln", status: "PENGAJUAN", kecamatan: "GUMELAR", desa: "GUMELAR",
+      persetujuan_sk: "SETUJU (Manual Admin)",
+      catatan: ""
+    };
+    setEditingReg(newEntry);
+    setIsAddingNew(true);
+  };
+
+  const stats = useMemo(() => calculateStats(data), [data]);
+  const pendingCount = useMemo(() => {
+    return (data || []).filter(item => (item.status || "").toUpperCase() === "PENGAJUAN").length;
+  }, [data]);
+  const filteredData = useMemo(() => {
+    return (data || []).filter(item => {
+      const s = searchTerm.toLowerCase();
+      const matchesSearch = String(item.nama_lengkap || "").toLowerCase().includes(s)
+        || String(item.no_hp_wa || "").includes(s)
+        || String(item.alamat_pemasangan || "").toLowerCase().includes(s);
+      const matchesPaket = filterPaket === "" || String(item.paket || "").includes(filterPaket);
+      const matchesStatus = filterStatus === "" || (item.status || "").toUpperCase() === filterStatus;
+      // Filter Mbps: cocokkan angka Mbps dalam nama paket
+      const matchesMbps = filterMbps === "" || String(item.paket || "").toLowerCase().includes(filterMbps.toLowerCase());
+      // Filter Desa
+      const matchesDesa = filterDesa === "" || (item.desa || "").toUpperCase() === filterDesa.toUpperCase();
+      // B: Filter tanggal
+      let matchesDate = true;
+      if (filterDateFrom || filterDateTo) {
+        const tsDate = item.timestamp ? item.timestamp.split(",")[0] : "";
+        const parts = tsDate.split("/");
+        if (parts.length === 3) {
+          const itemDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+          if (filterDateFrom) {
+            const [y, m, d] = filterDateFrom.split("-").map(Number);
+            matchesDate = matchesDate && itemDate >= new Date(y, m - 1, d);
+          }
+          if (filterDateTo) {
+            const [y, m, d] = filterDateTo.split("-").map(Number);
+            matchesDate = matchesDate && itemDate <= new Date(y, m - 1, d);
+          }
+        }
+      }
+      return matchesSearch && matchesPaket && matchesStatus && matchesMbps && matchesDesa && matchesDate;
+    }).reverse();
+  }, [data, searchTerm, filterPaket, filterStatus, filterMbps, filterDesa, filterDateFrom, filterDateTo]);
+
+  const unreadNotifCount = unreadCount || 0;
+
+  if (loading) return (
+    <div className="min-h-screen bg-[#0d1655] flex flex-col items-center justify-center p-4">
+      <div className="relative">
+        <div className="w-20 h-20 border-4 border-[#F47920]/30 border-t-[#F47920] rounded-full animate-spin"></div>
+      </div>
+      <h2 className="text-xl font-bold text-white mt-8 tracking-widest uppercase">Memuat Sistem...</h2>
+    </div>
+  );
+
+  return (
+    <div className={`flex h-screen ${isDarkMode ? 'bg-[#0f172a] text-white' : 'bg-slate-50 text-slate-800'}`}>
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className={`fixed top-6 left-1/2 -translate-x-1/2 z-[999] flex items-center gap-2 px-5 py-3 rounded-2xl shadow-xl border backdrop-blur-lg ${toast.type === 'success'
+              ? 'bg-emerald-500/90 border-emerald-400 text-white'
+              : 'bg-red-500/90 border-red-400 text-white'
+              }`}
+          >
+            {toast.type === 'success' ? (
+              <Lucide.CheckCircle className="w-5 h-5 text-emerald-100" />
+            ) : (
+              <Lucide.AlertCircle className="w-5 h-5 text-red-100" />
+            )}
+            <span className="font-semibold text-sm tracking-wide">{toast.message}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* --- Sidebar Desktop --- */}
+      <div className="hidden md:block">
+        <Sidebar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          isDarkMode={isDarkMode}
+          onLogout={handleLogout}
+          pendingCount={pendingCount}
+        />
+      </div>
+
+      <main className={`flex-1 h-screen w-full transition-all duration-300 md:ml-[80px] lg:ml-[250px] pb-24 md:pb-0 overflow-y-auto overflow-x-hidden custom-scrollbar relative`}>
+
+        <Header
+          isSidebarOpen={isSidebarOpen}
+          setIsSidebarOpen={setIsSidebarOpen}
+          isDarkMode={isDarkMode}
+          setIsDarkMode={setIsDarkMode}
+          userRole={userRole}
+          showNotif={showNotif}
+          setShowNotif={setShowNotif}
+          unreadNotifCount={unreadNotifCount}
+          handleLogout={handleLogout}
+          notifications={notifications}
+        />
+
+        {/* Content Header */}
+        <section className="px-4 md:px-8 py-6 flex flex-col justify-center">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-black text-[#0d1655] tracking-tight">
+                {activeTab === "Map View" ? "Peta Distribusi" :
+                  activeTab === "Dashboard" ? "Beranda" :
+                    activeTab === "Registrations" ? "Data Pendaftaran" :
+                      activeTab === "Analytics" ? "Grafik Analitik" :
+                        activeTab === "Customers" ? "Data Pelanggan" : activeTab}
+              </h1>
+              <p className="text-xs md:text-sm text-slate-500 mt-1 font-bold">Pemantauan & Ringkasan Aktivitas</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* H: Auto-refresh indicator */}
+              <button
+                onClick={silentRefresh}
+                title={`Terakhir diperbarui: ${lastRefresh.toLocaleTimeString("id-ID")}`}
+                className={`hidden md:flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all ${isRefreshing
+                  ? "bg-blue-50 border-blue-200 text-blue-600 animate-pulse"
+                  : "bg-white border-slate-200 text-slate-500 hover:border-[#0d1655] hover:text-[#0d1655]"
+                  }`}
+              >
+                <Lucide.RefreshCw size={12} className={isRefreshing ? "animate-spin" : ""} />
+                {isRefreshing ? "Memperbarui..." : `${lastRefresh.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}`}
+              </button>
+
+              {/* D: Notifikasi bell */}
+              <div className="relative">
+                <button
+                  onClick={() => { setShowNotif(!showNotif); setNotifications([]); }}
+                  className="relative w-10 h-10 flex items-center justify-center rounded-xl border-2 border-slate-200 bg-white hover:border-orange-300 transition-all"
+                >
+                  <Lucide.Bell size={18} className="text-slate-500" />
+                  {unreadNotifCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                      {unreadNotifCount > 9 ? "9+" : unreadNotifCount}
+                    </span>
+                  )}
+                </button>
+                {showNotif && (
+                  <div className="absolute right-0 top-12 w-72 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                      <p className="text-xs font-black text-[#0d1655] uppercase tracking-wider">Pendaftar Baru</p>
+                      <button onClick={() => setShowNotif(false)} className="text-slate-400 hover:text-slate-600"><Lucide.X size={14} /></button>
+                    </div>
+                    {notifications.length === 0 ? (
+                      <div className="px-4 py-6 text-center text-xs text-slate-400 font-bold">Tidak ada notifikasi baru</div>
+                    ) : (
+                      <div className="max-h-64 overflow-y-auto">
+                        {notifications.map((n, i) => (
+                          <div key={i} className="px-4 py-3 border-b border-slate-50 hover:bg-slate-50 flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-black text-sm shrink-0">
+                              {n.name.charAt(0)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-black text-slate-800 truncate">{n.name}</p>
+                              <p className="text-[10px] text-slate-400 font-bold">{n.time}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Tombol Impor Data Lama (Superadmin Only) */}
+              {userRole === "superadmin" && hasLegacyData && (
+                <button
+                  onClick={handleImportLegacyData}
+                  disabled={loading || isImporting}
+                  title="Impor Data Lama dari Local Storage ke Database"
+                  className="hidden md:flex items-center gap-1.5 px-3 py-2 bg-purple-50 hover:bg-purple-100 text-purple-600 rounded-xl text-[10px] font-black uppercase tracking-wider border border-purple-200 transition-all disabled:opacity-50"
+                >
+                  {isImporting ? (
+                    <>
+                      <div className="w-3 h-3 border-2 border-purple-600/30 border-t-purple-600 rounded-full animate-spin"></div>
+                      MENGIMPOR... {importProgress.current}/{importProgress.total}
+                    </>
+                  ) : (
+                    <>
+                      <Lucide.Download size={14} /> Impor Data Lama
+                    </>
+                  )}
+                </button>
+              )}
+
+              {/* Tombol Keluar HP */}
+              <button
+                onClick={handleLogout}
+                className="md:hidden flex items-center gap-1.5 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-black uppercase tracking-wider border border-red-100 transition-all"
+              >
+                <Lucide.LogOut size={14} /> Keluar
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section className="px-4 md:px-8 pb-8 space-y-6">
+          {/* Filter Status Bar - disembunyikan di tab Data Pelanggan, Dana Desa CSR, dan Analytics */}
+          {activeTab !== "Customers" && activeTab !== "Dana Desa CSR" && activeTab !== "Analytics" && activeTab !== "Overview" && <div className="flex items-center gap-3 overflow-x-auto custom-scrollbar pb-3 snap-x">
+            {[
+              { id: "", label: "Semua", icon: Lucide.LayoutGrid, color: "" },
+              { id: "PENGAJUAN", label: "Pengajuan", icon: Lucide.PlusCircle, color: "text-blue-600" },
+              { id: "SURVEY", label: "Survei", icon: Lucide.Search, color: "text-orange-500" },
+              { id: "PROSES", label: "Proses Pasang", icon: Lucide.Loader2, color: "text-yellow-600" },
+              { id: "BATAL", label: "Batal", icon: Lucide.XCircle, color: "text-red-500" },
+            ].map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setFilterStatus(f.id)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black transition-all shrink-0 snap-start border-2 whitespace-nowrap ${filterStatus === f.id
+                  ? "bg-[#0d1655] text-white border-[#0d1655] shadow-lg shadow-blue-900/20"
+                  : "bg-white text-slate-500 hover:bg-slate-50 border-slate-200"
+                  }`}
+              >
+                <f.icon size={14} className={filterStatus === f.id ? "" : f.color} />
+                {f.label}
+                {filterStatus === f.id && (
+                  <span className="bg-white/20 text-white text-[9px] font-black px-1.5 py-0.5 rounded-md">
+                    {f.id === ""
+                      ? filteredData.filter(d => !["AKTIF", "NON AKTIF"].includes((d.status || "").toUpperCase())).length
+                      : filteredData.length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>}
+
+
+          {/* Filter Mbps & Desa - disembunyikan di tab Data Pelanggan, Dana Desa CSR, dan Analytics */}
+          {activeTab !== "Customers" && activeTab !== "Dana Desa CSR" && activeTab !== "Analytics" && activeTab !== "Overview" && (
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Filter Mbps */}
+              <div className="flex items-center gap-2 bg-white border border-slate-100 rounded-2xl px-4 py-2.5 shadow-sm">
+                <Lucide.Zap size={14} className="text-[#F47920] shrink-0" />
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 shrink-0">Mbps:</span>
+                <div className="relative">
+                  <select
+                    value={filterMbps}
+                    onChange={(e) => setFilterMbps(e.target.value)}
+                    className="appearance-none bg-slate-50 border border-slate-200 text-slate-600 text-[10px] font-black rounded-xl px-3 py-1.5 pr-8 focus:outline-none focus:border-[#F47920] hover:border-[#F47920] transition-all cursor-pointer"
+                  >
+                    <option value="">Semua Mbps</option>
+                    <option value="20">20 Mbps</option>
+                    <option value="30">30 Mbps</option>
+                    <option value="50">50 Mbps</option>
+                    <option value="75">75 Mbps</option>
+                    <option value="100">100 Mbps</option>
+                  </select>
+                  <Lucide.ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Filter Desa */}
+              <div className="flex items-center gap-2 bg-white border border-slate-100 rounded-2xl px-4 py-2.5 shadow-sm">
+                <Lucide.MapPin size={14} className="text-[#0d1655] shrink-0" />
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 shrink-0">desa:</span>
+                <div className="relative">
+                  <select
+                    value={filterDesa}
+                    onChange={(e) => setFilterDesa(e.target.value)}
+                    className="appearance-none bg-slate-50 border border-slate-200 text-slate-600 text-[10px] font-black rounded-xl px-3 py-1.5 pr-8 focus:outline-none focus:border-[#0d1655] hover:border-[#0d1655] transition-all cursor-pointer"
+                  >
+                    <option value="">Semua Desa</option>
+                    <option value="GUMELAR">GUMELAR</option>
+                    <option value="CIHONJE">CIHONJE</option>
+                    <option value="TLAGA">TLAGA</option>
+                    <option value="SAMUDRA">SAMUDRA</option>
+                    <option value="SAMUDRA KULON">SAMUDRA KULON</option>
+                    <option value="CILANGKAP">CILANGKAP</option>
+                    <option value="PANINGKABAN">PANINGKABAN</option>
+                    <option value="KARANG KEMOJING">KARANG KEMOJING</option>
+                    <option value="GANCANG">GANCANG</option>
+                    <option value="KEDUNG URANG">KEDUNG URANG</option>
+                  </select>
+                  <Lucide.ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Filter Tanggal - disembunyikan di tab Data Pelanggan */}
+          {activeTab !== "Customers" && activeTab === "Registrations" && (
+            <div className="flex flex-wrap items-center gap-3 bg-white border border-slate-100 rounded-2xl px-4 py-3 shadow-sm">
+              <div className="flex items-center gap-2 text-xs font-black text-slate-500 uppercase tracking-wider shrink-0">
+                <Lucide.Calendar size={14} className="text-[#F47920]" />
+                Filter Tanggal:
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)}
+                  className="text-xs font-bold border-2 border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-[#F47920] transition-all bg-slate-50" />
+                <span className="text-slate-400 font-bold text-xs">s/d</span>
+                <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)}
+                  className="text-xs font-bold border-2 border-slate-200 rounded-xl px-3 py-2 outline-none focus:border-[#F47920] transition-all bg-slate-50" />
+                {(filterDateFrom || filterDateTo) && (
+                  <>
+                    <button onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); }}
+                      className="text-[10px] font-black text-red-500 flex items-center gap-1 px-2 py-1 rounded-lg border border-red-100 bg-red-50 transition-all">
+                      <Lucide.X size={10} /> Reset
+                    </button>
+                    <span className="text-[10px] font-black text-slate-400 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                      {filteredData.length} data
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          <AnimatePresence mode="wait">
+            {/* Dashboard Tab */}
+            {activeTab === "Dashboard" && (
+              <motion.div key="dashboard" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-8">
+                <KPICards totalRegistrants={data.length} statusCounts={stats.statusCounts} isDarkMode={isDarkMode} data={data} kpiStats={kpiStats} />
+
+                {/* 📊 Revenue Summary Cards + Quick Actions */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                  {/* Revenue Card - Dynamic calculation based on Paket */}
+                  <div className="bg-gradient-to-br from-[#0d1655] to-[#1a2a7a] rounded-2xl p-4 text-white shadow-xl shadow-blue-900/20">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                        <Lucide.CreditCard size={20} />
+                      </div>
+                      <span className="text-[10px] font-black bg-emerald-500/20 text-emerald-300 px-2 py-1 rounded-lg">AKTIF</span>
+                    </div>
+                    <p className="text-[10px] font-bold text-blue-200 uppercase tracking-wider mb-1">Pendapatan/Bulan</p>
+                    <p className="text-xl md:text-2xl font-black">Rp {(() => {
+                      const activeData = data.filter(d => (d.status || "").toUpperCase() === "AKTIF");
+                      const totalRevenue = activeData.reduce((sum, item) => sum + extractPrice(item.paket, PACKAGES), 0);
+                      return totalRevenue.toLocaleString("id-ID");
+                    })()}</p>
+                    <p className="text-[10px] text-blue-300 mt-1">{data.filter(d => (d.status || "").toUpperCase() === "AKTIF").length} Pelanggan Aktif</p>
+                  </div>
+
+                  {/* Growth Card */}
+                  <div className="bg-gradient-to-br from-[#F47920] to-[#d86617] rounded-2xl p-4 text-white shadow-xl shadow-orange-500/20">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                        <Lucide.TrendingUp size={20} />
+                      </div>
+                      <span className="text-[10px] font-black bg-white/20 text-white px-2 py-1 rounded-lg">BULAN INI</span>
+                    </div>
+                    <p className="text-[10px] font-bold text-orange-100 uppercase tracking-wider mb-1">Total Pendaftar</p>
+                    <p className="text-xl md:text-2xl font-black">{data.length}</p>
+                    <p className="text-[10px] text-orange-100 mt-1">🎯 Target: 50/bulan</p>
+                  </div>
+
+                  {/* Survey Card */}
+                  <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
+                        <Lucide.MapPin size={20} className="text-indigo-600" />
+                      </div>
+                      <span className="text-[10px] font-black bg-indigo-50 text-indigo-600 px-2 py-1 rounded-lg">PIPELINE</span>
+                    </div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Butuh Survei</p>
+                    <p className="text-xl md:text-2xl font-black text-[#0d1655]">{stats.statusCounts?.SURVEY || 0}</p>
+                    <div className="mt-2 w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                      <div className="bg-indigo-500 h-full rounded-full" style={{ width: `${Math.min(((stats.statusCounts?.SURVEY || 0) / 20) * 100, 100)}%` }}></div>
+                    </div>
+                  </div>
+
+                  {/* Proses Card */}
+                  <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
+                        <Lucide.Loader2 size={20} className="text-amber-600" />
+                      </div>
+                      <span className="text-[10px] font-black bg-amber-50 text-amber-600 px-2 py-1 rounded-lg">PROGRES</span>
+                    </div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Sedang Dipasang</p>
+                    <p className="text-xl md:text-2xl font-black text-[#0d1655]">{stats.statusCounts?.PROSES || 0}</p>
+                    <div className="mt-2 flex items-center gap-1">
+                      <Lucide.CheckCircle size={12} className="text-emerald-500" />
+                      <span className="text-[10px] font-bold text-slate-400">{stats.statusCounts?.AKTIF || 0} Aktif</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ⚡ Quick Actions */}
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                  <h4 className="text-xs font-black text-[#0d1655] uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <Lucide.Zap size={14} className="text-[#F47920]" /> Aksi Cepat
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {userRole === "superadmin" ? (
+                      <button onClick={handleAddNew} className="flex items-center gap-2 px-4 py-3 bg-[#0d1655] hover:bg-[#1a2a7a] text-white rounded-xl transition-all">
+                        <Lucide.PlusCircle size={16} />
+                        <span className="text-xs font-black">Tambah Data</span>
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 text-slate-400 rounded-xl border border-slate-200 cursor-not-allowed">
+                        <Lucide.Lock size={16} />
+                        <span className="text-xs font-bold">Admin Read-Only</span>
+                      </div>
+                    )}
+                    <button onClick={() => exportToExcel(filteredData)} className="flex items-center gap-2 px-4 py-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-xl transition-all border border-emerald-100">
+                      <Lucide.FileSpreadsheet size={16} />
+                      <span className="text-xs font-black">Export Excel</span>
+                    </button>
+                    <button onClick={() => setActiveTab("Analytics")} className="flex items-center gap-2 px-4 py-3 bg-blue-50 hover:bg-blue-100 text-[#0d1655] rounded-xl transition-all border border-blue-100">
+                      <Lucide.PieChart size={16} />
+                      <span className="text-xs font-black">Lihat Analytics</span>
+                    </button>
+                    <button onClick={() => setActiveTab("Map View")} className="flex items-center gap-2 px-4 py-3 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-xl transition-all border border-amber-100">
+                      <Lucide.Map size={16} />
+                      <span className="text-xs font-black">Peta Wilayah</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="w-full space-y-4">
+                  <div className="flex items-center justify-between px-1">
+                    <h3 className="text-lg font-black text-[#0d1655]">Aktivitas Terbaru</h3>
+                    <button onClick={() => setActiveTab("Registrations")} className="text-xs font-bold text-[#F47920] hover:underline flex items-center gap-1">
+                      Lihat Semua <Lucide.ArrowRight size={14} />
+                    </button>
+                  </div>
+                  {/* Table Wrapper for Mobile Scrolling */}
+                  <div className="w-full overflow-x-auto pb-4 custom-scrollbar">
+                    <RegistrationTable
+                      data={filteredData.slice(0, 5)}
+                      isDarkMode={isDarkMode}
+                      onViewDetails={setSelectedReg}
+                      onEdit={setEditingReg}
+                      onDelete={setConfirmDelete}
+                      onUpdateStatus={handleUpdateStatus}
+                      mini={true}
+                      userRole={userRole}
+                    />
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Overview & Panduan Tab */}
+            {activeTab === "Overview" && (
+              <motion.div key="overview" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.02 }} className="space-y-6">
+                <div className="bg-gradient-to-r from-[#0d1655] to-blue-900 rounded-3xl p-8 text-white shadow-xl overflow-hidden relative">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32 blur-3xl"></div>
+                  <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#F47920]/20 rounded-full translate-y-24 -translate-x-12 blur-2xl"></div>
+                  
+                  <div className="relative z-10 flex items-center justify-between">
+                    <div>
+                      <h3 className="text-3xl font-black tracking-tight mb-2">Selamat Datang di Portal Admin! 👋</h3>
+                      <p className="text-blue-100 font-medium max-w-2xl leading-relaxed text-sm md:text-base">
+                        Halaman ini adalah pusat kontrol utama untuk mengelola seluruh data registrasi pelanggan, manajemen jaringan, CSR desa, serta metrik keuangan.
+                      </p>
+                    </div>
+                    <div className="hidden md:block p-4 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20">
+                      <Lucide.ShieldCheck size={48} className="text-[#F47920]" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {/* Panduan Registrations */}
+                  <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all">
+                    <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mb-4">
+                      <Lucide.ClipboardList className="text-blue-600" size={24} />
+                    </div>
+                    <h4 className="text-lg font-black text-[#0d1655] mb-2">Pendaftaran Aktif</h4>
+                    <p className="text-slate-500 text-sm leading-relaxed mb-4">Kelola semua pendaftar baru yang masuk. Anda dapat menerima, membatalkan, mencetak invoice (PDF), atau mengekspor data registrasi ke Excel.</p>
+                    <button onClick={() => setActiveTab("Registrations")} className="text-xs font-bold text-[#F47920] hover:underline flex items-center gap-1">Buka Modul <Lucide.ArrowRight size={14} /></button>
+                  </div>
+
+                  {/* Panduan Data Pelanggan */}
+                  <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all">
+                    <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mb-4">
+                      <Lucide.Users className="text-emerald-600" size={24} />
+                    </div>
+                    <h4 className="text-lg font-black text-[#0d1655] mb-2">Data Pelanggan</h4>
+                    <p className="text-slate-500 text-sm leading-relaxed mb-4">Direktori terpusat dari semua pelanggan yang aktif. Fitur ini memungkinkan Anda memonitor pelanggan berdasarkan desa, titik koordinat, dan lainnya.</p>
+                    <button onClick={() => setActiveTab("Customers")} className="text-xs font-bold text-[#F47920] hover:underline flex items-center gap-1">Buka Modul <Lucide.ArrowRight size={14} /></button>
+                  </div>
+
+                  {/* Panduan Peta Geografis */}
+                  <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all">
+                    <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center mb-4">
+                      <Lucide.Map className="text-purple-600" size={24} />
+                    </div>
+                    <h4 className="text-lg font-black text-[#0d1655] mb-2">Peta Geografis</h4>
+                    <p className="text-slate-500 text-sm leading-relaxed mb-4">Lihat persebaran lokasi pemasangan secara visual di peta. Membantu teknisi merencanakan routing jalur kabel dan melihat potensi coverage.</p>
+                    <button onClick={() => setActiveTab("Map View")} className="text-xs font-bold text-[#F47920] hover:underline flex items-center gap-1">Buka Modul <Lucide.ArrowRight size={14} /></button>
+                  </div>
+
+                  {/* Panduan Dana Desa CSR */}
+                  <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all">
+                    <div className="w-12 h-12 bg-rose-50 rounded-2xl flex items-center justify-center mb-4">
+                      <Lucide.PieChart className="text-rose-600" size={24} />
+                    </div>
+                    <h4 className="text-lg font-black text-[#0d1655] mb-2">Dana Desa CSR</h4>
+                    <p className="text-slate-500 text-sm leading-relaxed mb-4">Pantau bagi hasil persentase keuntungan (CSR) yang disalurkan kembali ke tiap desa berdasarkan jumlah pelanggan aktif di desa tersebut.</p>
+                    <button onClick={() => setActiveTab("Dana Desa CSR")} className="text-xs font-bold text-[#F47920] hover:underline flex items-center gap-1">Buka Modul <Lucide.ArrowRight size={14} /></button>
+                  </div>
+
+                  {/* Panduan Analytics */}
+                  <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all">
+                    <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center mb-4">
+                      <Lucide.BarChart3 className="text-amber-600" size={24} />
+                    </div>
+                    <h4 className="text-lg font-black text-[#0d1655] mb-2">Analytics & Laporan</h4>
+                    <p className="text-slate-500 text-sm leading-relaxed mb-4">Dapatkan wawasan mendalam mengenai tren pendaftaran, rasio konversi, pendapatan bulanan yang diproyeksikan, dan status keseluruhan.</p>
+                    <button onClick={() => setActiveTab("Analytics")} className="text-xs font-bold text-[#F47920] hover:underline flex items-center gap-1">Buka Modul <Lucide.ArrowRight size={14} /></button>
+                  </div>
+
+                  {/* Panduan Settings */}
+                  <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all">
+                    <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center mb-4">
+                      <Lucide.Settings className="text-slate-600" size={24} />
+                    </div>
+                    <h4 className="text-lg font-black text-[#0d1655] mb-2">Pengaturan</h4>
+                    <p className="text-slate-500 text-sm leading-relaxed mb-4">Konfigurasi data master seperti Harga Paket, Daftar Desa/Wilayah, dan Manajemen Pengguna Admin/Superadmin secara lengkap dan aman.</p>
+                    <button onClick={() => setActiveTab("Settings")} className="text-xs font-bold text-[#F47920] hover:underline flex items-center gap-1">Buka Modul <Lucide.ArrowRight size={14} /></button>
+                  </div>
+                </div>
+
+                <div className="w-full space-y-4">
+                  <div className="flex items-center justify-between px-1">
+                    <h3 className="text-lg font-black text-[#0d1655]">Aktivitas Pendaftaran Terbaru</h3>
+                    <button onClick={() => setActiveTab("Registrations")} className="text-xs font-bold text-[#F47920] hover:underline flex items-center gap-1">
+                      Lihat Semua <Lucide.ArrowRight size={14} />
+                    </button>
+                  </div>
+                  {/* Table Wrapper for Mobile Scrolling */}
+                  <div className="w-full overflow-x-auto pb-4 custom-scrollbar">
+                    <RegistrationTable
+                      data={filteredData.slice(0, 5)}
+                      isDarkMode={isDarkMode}
+                      onViewDetails={setSelectedReg}
+                      onEdit={setEditingReg}
+                      onDelete={setConfirmDelete}
+                      onUpdateStatus={handleUpdateStatus}
+                      mini={true}
+                      userRole={userRole}
+                    />
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Registrations Tab */}
+            {activeTab === "Registrations" && (
+              <motion.div key="registrations" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.02 }} className="space-y-6">
+
+                {/* Action Bar */}
+                <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                  <div className="flex flex-row gap-3 w-full md:w-auto">
+                    <CustomPaketDropdown
+                      value={filterPaket}
+                      onChange={setFilterPaket}
+                      options={stats?.packageData || []}
+                    />
+                    <div className="flex gap-2">
+                      <button onClick={() => exportToExcel(filteredData)} className="flex flex-col items-center gap-1 px-3 py-2 bg-emerald-50 text-emerald-600 rounded-2xl border-2 border-emerald-100 font-bold hover:bg-emerald-600 hover:text-white transition-all shadow-sm">
+                        <Lucide.FileSpreadsheet size={20} />
+                        <span className="text-[9px] font-black uppercase tracking-wide">Excel</span>
+                      </button>
+                      <button onClick={async () => setPdfPreviewUrl(await generatePDFBlobUrl(filteredData))} className="flex flex-col items-center gap-1 px-3 py-2 bg-red-50 text-red-600 rounded-2xl border-2 border-red-100 font-bold hover:bg-red-600 hover:text-white transition-all shadow-sm">
+                        <Lucide.FileText size={20} />
+                        <span className="text-[9px] font-black uppercase tracking-wide">PDF</span>
+                      </button>
+                    </div>
+                  </div>
+                  {userRole === "superadmin" && (
+                    <button onClick={handleAddNew} className="w-full md:w-auto flex items-center justify-center gap-2 px-8 py-4 bg-[#F47920] hover:bg-[#d86617] text-white rounded-2xl shadow-xl shadow-orange-500/20 text-sm font-black uppercase tracking-widest transition-all">
+                      <Lucide.PlusCircle size={20} /> Tambah Data
+                    </button>
+                  )}
+                </div>
+
+                {/* Table Wrapper */}
+                <div className="w-full overflow-x-auto pb-4 custom-scrollbar bg-white rounded-3xl shadow-sm border border-slate-100">
+                  <RegistrationTable
+                    data={filteredData.filter(d => !["AKTIF", "NON AKTIF"].includes((d.status || "").toUpperCase()))}
+                    isDarkMode={isDarkMode}
+                    onViewDetails={setSelectedReg}
+                    onEdit={setEditingReg}
+                    onDelete={setConfirmDelete}
+                    onUpdateStatus={handleUpdateStatus}
+                    userRole={userRole}
+                  />
+                </div>
+              </motion.div>
+            )}
+
+            {/* Other Tabs */}
+            {activeTab === "Analytics" && (
+              <motion.div key="analytics" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <FullAnalytics stats={stats} isDarkMode={isDarkMode} totalCount={data.length} />
+              </motion.div>
+            )}
+
+            {activeTab === "Customers" && (
+              <motion.div key="customers" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <CustomersView data={data} isDarkMode={isDarkMode} onViewDetails={setSelectedReg} onDelete={setConfirmDelete} onUpdateStatus={handleUpdateStatus} onEdit={setEditingReg} userRole={userRole} />
+              </motion.div>
+            )}
+
+            {activeTab === "Map View" && (
+              <motion.div key="map" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <GeographicalView data={filteredData} isDarkMode={isDarkMode} />
+              </motion.div>
+            )}
+
+            {activeTab === "Dana Desa CSR" && (
+              <motion.div key="dana-desa" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <VillageFundChart data={data} isDarkMode={isDarkMode} />
+              </motion.div>
+            )}
+
+            {/* AUDIT FIX: Settings tab dengan SettingsView real CRUD */}
+            {activeTab === "Settings" && (
+              <motion.div key="settings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <SettingsView
+                  isDarkMode={isDarkMode}
+                  setIsDarkMode={setIsDarkMode}
+                  userRole={userRole}
+                  initialPackages={packages}
+                  initialVillages={villages}
+                  initialUsers={users}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </section>
+      </main>
+
+      {/* Mobile Bottom Navigation Bar - Visible only on Mobile */}
+      <div className="md:hidden fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-xl border-t border-slate-200 px-2 py-3 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] pb-safe">
+        <div className="grid grid-cols-5 justify-around items-center">
+          {[
+            { id: "Overview", icon: Lucide.Home, label: "Home" },
+            { id: "Registrations", icon: Lucide.CheckSquare, label: "Pesanan" },
+            { id: "Dana Desa CSR", icon: Lucide.Wallet, label: "Dana Desa" },
+            { id: "Map View", icon: Lucide.MapPin, label: "Peta" },
+            { id: "Customers", icon: Lucide.Users, label: "Pelanggan" },
+          ].map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all duration-300 ease-out ${isActive ? 'scale-105' : 'hover:scale-95'}`}
+              >
+                <div className={`relative p-2.5 rounded-full transition-all duration-300 ${isActive ? 'bg-gradient-to-br from-[#f97316] to-[#f47920] shadow-lg shadow-orange-500/30' : 'hover:bg-gray-100'}`}>
+                  <tab.icon size={20} className={`transition-all duration-300 ${isActive ? 'text-white scale-110' : 'text-[#0d1655]/60'}`} strokeWidth={isActive ? 2.5 : 2} />
+                </div>
+                <span className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${isActive ? 'bg-[#f97316] scale-100' : 'bg-transparent'}`} />
+                <span className={`text-[9px] font-medium transition-all duration-300 ${isActive ? 'text-[#0d1655] font-semibold' : 'text-[#0d1655]/50'}`}>
+                  {tab.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Modals */}
+      <PDFPreviewModal url={pdfPreviewUrl} onClose={() => setPdfPreviewUrl(null)} onDownload={async () => await downloadPDF(filteredData)} />
+      <DetailsModal item={selectedReg} isDarkMode={isDarkMode} onClose={() => setSelectedReg(null)} />
+      <ConfirmDeleteModal timestamp={confirmDelete} isDarkMode={isDarkMode} onClose={() => setConfirmDelete(null)} onConfirm={handleDelete} />
+      <EditRegistrationModal item={editingReg} isDarkMode={isDarkMode} onClose={() => setEditingReg(null)} onSave={handleSaveEdit} />
+    </div>
+  );
+}
