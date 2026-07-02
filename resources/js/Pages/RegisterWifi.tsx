@@ -67,6 +67,7 @@ export default function RegisterWifi({ villages = [], packages = [] }: any) {
     if (flash?.success) {
       // flash success handled by inertia
     }
+    const params = new URLSearchParams(window.location.search);
     const paketParam = params.get("paket");
     if (paketParam) {
       import("../constants/packages").then(({ PACKAGES }) => {

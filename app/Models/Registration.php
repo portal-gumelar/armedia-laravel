@@ -49,11 +49,11 @@ class Registration extends Model
     protected static function booted()
     {
         static::created(function ($registration) {
-            $packageName = $registration->internetPackage ? $registration->internetPackage->name : 'Tidak diketahui';
+            $packageName = $registration->paket ?: 'Tidak diketahui';
             \App\Services\TelegramService::sendMessage(
                 "🚀 <b>PENDAFTARAN INTERNET BARU</b>\n\n" .
                 "<b>Nama:</b> {$registration->nama}\n" .
-                "<b>No. Telp:</b> {$registration->no_telp}\n" .
+                "<b>No. Telp:</b> {$registration->whatsapp}\n" .
                 "<b>Paket:</b> {$packageName}\n" .
                 "<b>Alamat:</b> {$registration->alamat}\n\n" .
                 "Segera hubungi pendaftar untuk proses survei!"

@@ -32,8 +32,15 @@ class AdminSettingsController extends Controller
         if (!auth()->user()->hasRole('super_admin') && !auth()->user()->hasRole('superadmin')) {
             abort(403, 'Unauthorized action.');
         }
+        $validated = $request->validate([
+            'name' => 'required|string',
+            'speed_mbps' => 'required|numeric',
+            'price' => 'required|numeric',
+            'description' => 'nullable|string',
+            'is_active' => 'boolean'
+        ]);
         $pkg = InternetPackage::findOrFail($id);
-        $pkg->update($request->all());
+        $pkg->update($validated);
         return redirect()->back()->with('success', 'Paket berhasil diperbarui.');
     }
 

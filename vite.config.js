@@ -12,4 +12,10 @@ export default defineConfig({
         react(),
         tailwindcss(),
     ],
+    server: {
+        host: '0.0.0.0',
+        hmr: {
+            host: '10.171.113.121',
+        },
+    },
 });
