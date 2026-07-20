@@ -26,7 +26,7 @@ class MemberPanelProvider extends PanelProvider
             ->id('member')
             ->path('member')
             ->authGuard('customer')
-            ->login()
+            ->login(\App\Filament\Member\Pages\Auth\Login::class)
             ->brandLogo('https://ik.imagekit.io/Gumelar/LogO/logo%20pt.png?updatedAt=1778213993513')
             ->brandLogoHeight('2.5rem')
             ->colors([

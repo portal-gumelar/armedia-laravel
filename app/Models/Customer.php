@@ -95,7 +95,14 @@ class Customer extends Authenticatable implements FilamentUser
             'monitoring_status'    => MonitoringStatus::class,
             'activated_at'         => 'date',
             'monitoring_checked_at' => 'datetime',
+            'password'             => 'hashed',
         ];
+    }
+
+    // Gunakan 'whatsapp' sebagai field login (bukan 'email')
+    public function getAuthIdentifierName(): string
+    {
+        return 'whatsapp';
     }
 
     // ── Relasi ──────────────────────────────────────────────────────────────
