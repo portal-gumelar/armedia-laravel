@@ -112,6 +112,9 @@ class Customer extends Authenticatable implements FilamentUser
         'jatuh_tempo_bulan_ini',
         'tagihan_bln1_prorata',
         'teknisi_pasang',
+        'mikrotik_server_id',
+        'pppoe_username',
+        'pppoe_password',
     ];
 
     protected $hidden = [
@@ -162,6 +165,12 @@ class Customer extends Authenticatable implements FilamentUser
     {
         return $this->belongsTo(Device::class);
     }
+
+    public function mikrotikServer(): BelongsTo
+    {
+        return $this->belongsTo(MikrotikServer::class);
+    }
+
 
     public function invoices(): HasMany
     {

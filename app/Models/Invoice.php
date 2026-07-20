@@ -43,6 +43,24 @@ class Invoice extends Model
                 $invoice->updateQuietly(['invoice_no' => $invoiceNo]);
             }
         });
+
+        static::updated(function (Invoice $invoice) {
+            // Jika tagihan berubah jadi lunas
+            if ($invoice->isDirty('status') && $invoice->status === InvoiceStatus::LUNAS) {
+                // Un-isolir Mikrotik
+                if ($invoice->customer) {
+                    \App\Jobs\ProcessMikrotikIsolation::dispatch($invoice->customer, 'unisolate');
+                }
+                
+                // Kirim WA Kuitansi
+                try {
+                    $waService = app(\App\Services\WhatsAppService::class);
+                    $waService->sendInvoiceNotification($invoice);
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error("Gagal kirim WA kuitansi otomatis: " . $e->getMessage());
+                }
+            }
+        });
     }
 
     public function getActivitylogOptions(): LogOptions

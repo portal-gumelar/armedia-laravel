@@ -159,6 +159,18 @@ class CustomerResource extends Resource
                         ->relationship('odp', 'code')
                         ->searchable()
                         ->preload(),
+                    Forms\Components\Select::make('mikrotik_server_id')
+                        ->label('Mikrotik Server (Isolir Otomatis)')
+                        ->relationship('mikrotikServer', 'name')
+                        ->searchable()
+                        ->preload(),
+                    Forms\Components\TextInput::make('pppoe_username')
+                        ->label('PPPoE Username')
+                        ->placeholder('nama-pelanggan'),
+                    Forms\Components\TextInput::make('pppoe_password')
+                        ->label('PPPoE Password')
+                        ->password()
+                        ->revealable(),
                     Forms\Components\Select::make('device_id')
                         ->label('Perangkat ONT')
                         ->relationship('device', 'device_code')
