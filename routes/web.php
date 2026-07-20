@@ -11,6 +11,26 @@ use App\Models\Registration;
 use App\Models\InternetPackage;
 use App\Models\WebSetting;
 use Illuminate\Http\Request;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+
+Route::get('/setup-admin', function() {
+    $user = User::updateOrCreate(
+        ['email' => 'admin@armedia.id'],
+        [
+            'name' => 'Admin Armedia',
+            'password' => Hash::make('Masuk1234')
+        ]
+    );
+    
+    // Assign role super admin jika menggunakan spatie permission
+    if (class_exists(\Spatie\Permission\Models\Role::class)) {
+        $role = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+        $user->assignRole($role);
+    }
+
+    return 'Akun admin berhasil dibuat! Silakan kembali ke <a href="/admin/login">Halaman Login Admin</a>';
+});
 
 Route::get('/', function () {
     $testimonials = Testimonial::all();
