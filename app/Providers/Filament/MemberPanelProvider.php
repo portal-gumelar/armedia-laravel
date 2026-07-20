@@ -27,6 +27,7 @@ class MemberPanelProvider extends PanelProvider
             ->path('member')
             ->authGuard('customer')
             ->login(\App\Filament\Member\Pages\Auth\Login::class)
+            ->profile(\App\Filament\Member\Pages\EditProfile::class)
             ->brandLogo('https://ik.imagekit.io/Gumelar/LogO/logo%20pt.png?updatedAt=1778213993513')
             ->brandLogoHeight('2.5rem')
             ->colors([
@@ -39,7 +40,8 @@ class MemberPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Member/Widgets'), for: 'App\\Filament\\Member\\Widgets')
             ->widgets([
-                Widgets\AccountWidget::class,
+                \App\Filament\Member\Widgets\CustomerInfoWidget::class,
+                \App\Filament\Member\Widgets\BillingSummaryWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,

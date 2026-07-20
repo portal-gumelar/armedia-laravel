@@ -24,17 +24,17 @@ class InvoiceResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('invoice_number')
+                Forms\Components\TextInput::make('invoice_no')
                     ->label('Nomor Tagihan')
                     ->disabled(),
                 Forms\Components\DatePicker::make('due_date')
                     ->label('Jatuh Tempo')
                     ->disabled(),
-                Forms\Components\TextInput::make('total_amount')
+                Forms\Components\TextInput::make('amount')
                     ->label('Total (Rp)')
                     ->prefix('Rp')
                     ->disabled(),
-                Forms\Components\Select::make('payment_status')
+                Forms\Components\Select::make('status')
                     ->label('Status')
                     ->options([
                         'unpaid' => 'Belum Lunas',
@@ -48,16 +48,16 @@ class InvoiceResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('invoice_number')
+                Tables\Columns\TextColumn::make('invoice_no')
                     ->label('Nomor Tagihan')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('billing_period')
+                Tables\Columns\TextColumn::make('period')
                     ->label('Periode')
                     ->date('M Y'),
-                Tables\Columns\TextColumn::make('total_amount')
+                Tables\Columns\TextColumn::make('amount')
                     ->label('Total (Rp)')
                     ->money('IDR'),
-                Tables\Columns\BadgeColumn::make('payment_status')
+                Tables\Columns\BadgeColumn::make('status')
                     ->label('Status')
                     ->colors([
                         'danger' => 'unpaid',
@@ -78,7 +78,7 @@ class InvoiceResource extends Resource
     // Hanya tampilkan tagihan milik pelanggan yang sedang login
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->where('customer_id', auth()->id());
+        return parent::getEloquentQuery()->where('customer_id', auth('customer')->id());
     }
 
     public static function getPages(): array

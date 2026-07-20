@@ -45,7 +45,9 @@ class TicketResource extends Resource
                 Forms\Components\Hidden::make('status')
                     ->default('open'),
                 Forms\Components\Hidden::make('customer_id')
-                    ->default(fn () => auth()->id()),
+                    ->default(fn () => auth('customer')->id()),
+                Forms\Components\Hidden::make('mitra_id')
+                    ->default(fn () => auth('customer')->user()->mitra_id),
             ]);
     }
 
@@ -53,7 +55,7 @@ class TicketResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('ticket_number')
+                Tables\Columns\TextColumn::make('ticket_no')
                     ->label('Nomor Tiket')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('subject')
@@ -70,6 +72,14 @@ class TicketResource extends Resource
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Dibuat')
                     ->dateTime('d M Y H:i'),
+                Tables\Columns\TextColumn::make('technician_notes')
+                    ->label('Catatan Teknisi')
+                    ->limit(30)
+                    ->tooltip(function (\Filament\Tables\Columns\TextColumn $column): ?string {
+                        $state = $column->getState();
+                        if (strlen($state) <= $column->getCharacterLimit()) return null;
+                        return $state;
+                    }),
             ])
             ->filters([
                 //
@@ -82,7 +92,7 @@ class TicketResource extends Resource
     // Hanya tampilkan tiket milik pelanggan yang sedang login
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->where('customer_id', auth()->id());
+        return parent::getEloquentQuery()->where('customer_id', auth('customer')->id());
     }
 
     public static function getPages(): array
