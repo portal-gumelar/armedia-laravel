@@ -22,12 +22,18 @@ class Odp extends Model
     }
 
     protected $fillable = [
+        'mitra_id',
         'code',
         'max_capacity',
         'village_id',
         'status',
         'notes',
     ];
+
+    public function mitra(): BelongsTo
+    {
+        return $this->belongsTo(Mitra::class);
+    }
 
     public function village(): BelongsTo
     {

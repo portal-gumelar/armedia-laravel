@@ -53,6 +53,7 @@ class Invoice extends Model
     }
 
     protected $fillable = [
+        'mitra_id',
         'customer_id',
         'invoice_no',
         'period',
@@ -79,5 +80,10 @@ class Invoice extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function mitra(): BelongsTo
+    {
+        return $this->belongsTo(Mitra::class);
     }
 }

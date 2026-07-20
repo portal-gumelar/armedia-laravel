@@ -55,6 +55,7 @@ class Customer extends Authenticatable implements FilamentUser
     }
 
     protected $fillable = [
+        'mitra_id',
         'id_arm',
         'id_lama',
         'name',
@@ -98,6 +99,11 @@ class Customer extends Authenticatable implements FilamentUser
     }
 
     // ── Relasi ──────────────────────────────────────────────────────────────
+
+    public function mitra(): BelongsTo
+    {
+        return $this->belongsTo(Mitra::class);
+    }
 
     public function internetPackage(): BelongsTo
     {

@@ -16,6 +16,7 @@ class Ticket extends Model
     use SoftDeletes, LogsActivity;
 
     protected $fillable = [
+        'mitra_id',
         'ticket_no',
         'customer_id',
         'category',
@@ -44,6 +45,11 @@ class Ticket extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function mitra(): BelongsTo
+    {
+        return $this->belongsTo(Mitra::class);
     }
 
     // ── Auto-Numbering & Notifikasi ──────────────────────────────────────────

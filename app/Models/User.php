@@ -15,11 +15,15 @@ use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
 use Filament\Models\Contracts\FilamentUser;
+use Filament\Models\Contracts\HasTenants;
 use Filament\Panel;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 #[Fillable(['name', 'email', 'password', 'avatar_url'])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable implements HasAvatar, FilamentUser
+class User extends Authenticatable implements HasAvatar, FilamentUser, HasTenants
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, HasRoles, LogsActivity;
@@ -40,6 +44,23 @@ class User extends Authenticatable implements HasAvatar, FilamentUser
     {
         // Izinkan semua user terdaftar untuk masuk ke panel (dibatasi oleh Role Spatie)
         return true;
+    }
+
+    // ── Multi-Tenancy Mitra ────────────────────────────────────────────────
+
+    public function mitras(): BelongsToMany
+    {
+        return $this->belongsToMany(Mitra::class, 'mitra_user');
+    }
+
+    public function getTenants(Panel $panel): Collection
+    {
+        return $this->mitras;
+    }
+
+    public function canAccessTenant(Model $tenant): bool
+    {
+        return $this->mitras()->whereKey($tenant)->exists();
     }
 
     /**
