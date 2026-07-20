@@ -31,8 +31,10 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogo('https://ik.imagekit.io/Gumelar/LogO/logo%20pt.png?updatedAt=1778213993513')
             ->brandLogoHeight('2.5rem')
             ->colors([
-                'primary' => Color::Red, // Changing to Red to match ARMEDIA branding
+                'primary' => Color::Red, // ARMEDIA branding
             ])
+            ->font('Poppins')
+            ->sidebarCollapsibleOnDesktop()
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
