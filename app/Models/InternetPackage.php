@@ -32,6 +32,8 @@ class InternetPackage extends Model
         'brand',
         'speed_mbps',
         'ip_allocation',
+        'kode',
+        'alokasi_ip',
     ];
 
     protected function casts(): array

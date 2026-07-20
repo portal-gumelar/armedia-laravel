@@ -28,6 +28,10 @@ class Odp extends Model
         'village_id',
         'status',
         'notes',
+        'kapasitas_maks',
+        'sisa_slot',
+        'status_odp',
+        'desa_lokasi',
     ];
 
     public function mitra(): BelongsTo

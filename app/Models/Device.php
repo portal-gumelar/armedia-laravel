@@ -29,6 +29,11 @@ class Device extends Model
         'batch_month_year',
         'status',
         'customer_id',
+        'kode_id',
+        'tgl_ambil_dari_stok',
+        'id_lama_referensi',
+        'kondisi',
+        'catatan',
     ];
 
     protected function casts(): array
