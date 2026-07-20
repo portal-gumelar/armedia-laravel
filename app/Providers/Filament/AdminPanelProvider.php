@@ -58,7 +58,6 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->plugins([
                 \BezhanSalleh\FilamentShield\FilamentShieldPlugin::make()
-                    ->shieldResource(navigationGroup: 'Manajemen Akses'),
             ])
             ->middleware([
                 EncryptCookies::class,
