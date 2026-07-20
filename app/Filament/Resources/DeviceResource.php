@@ -94,6 +94,38 @@ class DeviceResource extends Resource
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
+                Tables\Actions\Action::make('provision')
+                    ->label('Aktivasi OLT')
+                    ->icon('heroicon-o-bolt')
+                    ->color('warning')
+                    ->form([
+                        Forms\Components\TextInput::make('olt_ip')
+                            ->label('IP OLT')
+                            ->required()
+                            ->default('192.168.100.2'),
+                        Forms\Components\TextInput::make('olt_user')
+                            ->label('Username OLT')
+                            ->required()
+                            ->default('admin'),
+                        Forms\Components\TextInput::make('olt_pass')
+                            ->label('Password OLT')
+                            ->password()
+                            ->required(),
+                    ])
+                    ->action(function (Device $record, array $data): void {
+                        \App\Jobs\ProvisionOltDeviceJob::dispatch(
+                            $record,
+                            $data['olt_ip'],
+                            $data['olt_user'],
+                            $data['olt_pass']
+                        );
+                        
+                        \Filament\Notifications\Notification::make()
+                            ->title('Proses Aktivasi OLT Dimulai')
+                            ->body('Perintah sedang dikirim ke OLT di latar belakang (background job).')
+                            ->success()
+                            ->send();
+                    }),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\RestoreAction::make(),
                 Tables\Actions\ForceDeleteAction::make(),
