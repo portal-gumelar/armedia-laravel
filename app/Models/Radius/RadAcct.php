@@ -6,9 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class RadAcct extends Model
 {
-    // Point to the radius database connection
-    protected $connection = 'radius';
-    
     // The table name in freeradius
     protected $table = 'radacct';
 
