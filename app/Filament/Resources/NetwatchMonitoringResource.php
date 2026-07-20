@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Resources\NetwatchMonitoringResource\Pages;
 use App\Models\NetwatchMonitoring;
 use Filament\Forms;
 use Filament\Forms\Form;
