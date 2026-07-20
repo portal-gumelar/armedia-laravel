@@ -14,4 +14,16 @@ class EditOdp extends EditRecord
     {
         return [Actions\DeleteAction::make()];
     }
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        // Sync koordinat dari MapPicker ke kolom latitude/longitude di tabel
+        if (isset($data['koordinat']['lat']) && isset($data['koordinat']['lng'])) {
+            $data['latitude']  = $data['koordinat']['lat'];
+            $data['longitude'] = $data['koordinat']['lng'];
+        }
+        unset($data['koordinat']);
+
+        return $data;
+    }
 }

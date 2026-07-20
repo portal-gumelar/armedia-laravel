@@ -32,6 +32,15 @@ class Odp extends Model
         'sisa_slot',
         'status_odp',
         'desa_lokasi',
+        'latitude',
+        'longitude',
+        'alamat',
+        'port_terpakai',
+    ];
+
+    protected $casts = [
+        'latitude' => 'float',
+        'longitude' => 'float',
     ];
 
     public function mitra(): BelongsTo
