@@ -47,6 +47,11 @@ return [
             'driver' => 'session',
             'provider' => 'members',
         ],
+
+        'customer' => [
+            'driver' => 'session',
+            'provider' => 'customers',
+        ],
     ],
 
     /*
@@ -75,6 +80,11 @@ return [
         'members' => [
             'driver' => 'eloquent',
             'model' => App\Models\AcrMember::class,
+        ],
+
+        'customers' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Customer::class,
         ],
     ],
 

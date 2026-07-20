@@ -13,9 +13,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-class Customer extends Model
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
+
+class Customer extends Authenticatable implements FilamentUser
 {
     use HasFactory, LogsActivity, SoftDeletes;
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $panel->getId() === 'member';
+    }
 
     /**
      * Auto-generate id_arm saat pelanggan baru dibuat.
@@ -50,6 +59,7 @@ class Customer extends Model
         'id_lama',
         'name',
         'whatsapp',
+        'password',
         'nik',
         'alamat',
         'kecamatan',
@@ -70,6 +80,11 @@ class Customer extends Model
         'maps_url',
         'drive_folder_url',
         'notes',
+    ];
+
+    protected $hidden = [
+        'password',
+        'remember_token',
     ];
 
     protected function casts(): array
