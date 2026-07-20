@@ -18,10 +18,12 @@ class InternetPackageResource extends Resource
     protected static ?string $model = InternetPackage::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-wifi';
-    protected static ?string $navigationGroup = 'Konten Website';
+    protected static ?string $navigationGroup = 'Operasional ISP';  // dipindah dari Konten Website
     protected static ?string $navigationLabel = 'Paket Internet';
     protected static ?string $pluralModelLabel = 'Paket Internet';
     protected static ?string $modelLabel = 'Paket Internet';
+    protected static ?string $recordTitleAttribute = 'nama_paket';
+    protected static ?int    $navigationSort = 4;
 
     public static function form(Form $form): Form
     {
@@ -40,6 +42,20 @@ class InternetPackageResource extends Resource
                     ->maxLength(255),
                 Forms\Components\Toggle::make('is_active')
                     ->required(),
+                // ── Field ISP tambahan ──────────────────────────────────
+                Forms\Components\TextInput::make('code')
+                    ->label('Kode Paket')
+                    ->unique(ignoreRecord: true)
+                    ->placeholder('AR-2, HR-11'),
+                Forms\Components\Select::make('brand')
+                    ->label('Brand')
+                    ->options(\App\Enums\PackageBrand::class),
+                Forms\Components\TextInput::make('speed_mbps')
+                    ->label('Kecepatan (Mbps)')
+                    ->numeric(),
+                Forms\Components\TextInput::make('ip_allocation')
+                    ->label('Alokasi IP')
+                    ->placeholder('10.152.6-10.152.7'),
             ]);
     }
 
@@ -49,13 +65,23 @@ class InternetPackageResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('nama_paket')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('kecepatan')
+                Tables\Columns\TextColumn::make('code')
+                    ->label('Kode')
                     ->searchable(),
+                Tables\Columns\BadgeColumn::make('brand')
+                    ->label('Brand'),
+                Tables\Columns\TextColumn::make('speed_mbps')
+                    ->label('Mbps')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('kecepatan')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('harga')
-                    ->numeric()
+                    ->money('IDR')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('keterangan_promo')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\IconColumn::make('is_active')
                     ->boolean(),
                 Tables\Columns\TextColumn::make('created_at')

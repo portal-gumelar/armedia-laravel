@@ -42,6 +42,20 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 Widgets\AccountWidget::class,
             ])
+            ->navigationGroups([
+                \Filament\Navigation\NavigationGroup::make()
+                     ->label('Operasional ISP'),
+                \Filament\Navigation\NavigationGroup::make()
+                     ->label('Jaringan & Monitoring'),
+                \Filament\Navigation\NavigationGroup::make()
+                     ->label('Layanan Pelanggan'),
+                \Filament\Navigation\NavigationGroup::make()
+                     ->label('Member & Reward'),
+                \Filament\Navigation\NavigationGroup::make()
+                     ->label('Konten Website'),
+                \Filament\Navigation\NavigationGroup::make()
+                     ->label('Pengaturan'),
+            ])
             ->plugins([
                 \BezhanSalleh\FilamentShield\FilamentShieldPlugin::make(),
             ])

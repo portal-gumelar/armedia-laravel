@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
-use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Support\LogOptions;
 
 class Registration extends Model
 {
@@ -13,6 +13,7 @@ class Registration extends Model
     use HasFactory, LogsActivity;
 
     protected $fillable = [
+        // Kolom lama
         'paket',
         'langganan_sebelumnya',
         'nama',
@@ -32,6 +33,13 @@ class Registration extends Model
         'foto_ktp',
         'catatan',
         'tanggal_aktif',
+        // Kolom PSB baru
+        'report_no',
+        'jadwal_pasang',
+        'marketing',
+        'target_odp_id',
+        'pipeline_status',
+        'converted_customer_id',
     ];
 
     public function getActivitylogOptions(): LogOptions
@@ -44,6 +52,16 @@ class Registration extends Model
     public function internetPackage()
     {
         return $this->belongsTo(InternetPackage::class);
+    }
+
+    public function convertedCustomer()
+    {
+        return $this->belongsTo(Customer::class, 'converted_customer_id');
+    }
+
+    public function targetOdp()
+    {
+        return $this->belongsTo(Odp::class, 'target_odp_id');
     }
 
     protected static function booted()

@@ -123,4 +123,6 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    'isp_api_key' => env('ISP_API_KEY', 'rahasia123'),
+
 ];

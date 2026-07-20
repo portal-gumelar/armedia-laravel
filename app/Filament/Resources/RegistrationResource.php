@@ -2,69 +2,100 @@
 
 namespace App\Filament\Resources;
 
+use App\Enums\PipelineStatus;
 use App\Filament\Resources\RegistrationResource\Pages;
 use App\Filament\Resources\RegistrationResource\RelationManagers;
+use App\Models\Customer;
 use App\Models\Registration;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class RegistrationResource extends Resource
 {
     protected static ?string $model = Registration::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-user-plus';
-    protected static ?string $navigationGroup = 'Layanan Pelanggan';
-    protected static ?string $navigationLabel = 'Registrasi Pemasangan';
-    protected static ?string $pluralModelLabel = 'Registrasi Pemasangan';
-    protected static ?string $modelLabel = 'Registrasi Pemasangan';
+    protected static ?string $navigationGroup = 'Operasional ISP'; // dipindah dari Layanan Pelanggan
+    protected static ?string $navigationLabel = 'Calon Pelanggan (PSB)';
+    protected static ?string $pluralModelLabel = 'Calon Pelanggan';
+    protected static ?string $modelLabel = 'Calon Pelanggan';
+    protected static ?int    $navigationSort = 1;
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('paket')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('langganan_sebelumnya')
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('nama')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('whatsapp')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('kecamatan')
-                    ->required()
-                    ->maxLength(255)
-                    ->default('GUMELAR'),
-                Forms\Components\TextInput::make('desa')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\Textarea::make('alamat')
-                    ->required()
-                    ->columnSpanFull(),
-                Forms\Components\TextInput::make('tanggal_pemasangan')
-                    ->required()
-                    ->maxLength(255)
-                    ->default('Secepatnya'),
-                Forms\Components\TextInput::make('waktu_survei')
-                    ->required()
-                    ->maxLength(255)
-                    ->default('Pagi (08:00 - 11:00)'),
-                Forms\Components\Select::make('status')
-                    ->options([
-                        'menunggu_survei' => 'Menunggu Survei',
-                        'instalasi' => 'Proses Instalasi',
-                        'aktif' => 'Aktif',
-                        'batal' => 'Batal',
-                    ])
-                    ->default('menunggu_survei')
-                    ->required(),
+                // ── Data Pendaftar (existing fields) ────────────────────
+                Forms\Components\Section::make('Data Pendaftar')
+                    ->columns(2)
+                    ->schema([
+                        Forms\Components\TextInput::make('paket')
+                            ->required()
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('nama')
+                            ->required()
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('whatsapp')
+                            ->required()
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('kecamatan')
+                            ->required()
+                            ->maxLength(255)
+                            ->default('GUMELAR'),
+                        Forms\Components\TextInput::make('desa')
+                            ->required()
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('rw')->maxLength(10),
+                        Forms\Components\TextInput::make('rt')->maxLength(10),
+                        Forms\Components\Textarea::make('alamat')
+                            ->required()
+                            ->columnSpanFull(),
+                        Forms\Components\TextInput::make('tanggal_pemasangan')
+                            ->required()
+                            ->maxLength(255)
+                            ->default('Secepatnya'),
+                        Forms\Components\TextInput::make('waktu_survei')
+                            ->required()
+                            ->maxLength(255)
+                            ->default('Pagi (08:00 - 11:00)'),
+                        Forms\Components\Select::make('status')
+                            ->options([
+                                'menunggu_survei' => 'Menunggu Survei',
+                                'instalasi' => 'Proses Instalasi',
+                                'aktif' => 'Aktif',
+                                'batal' => 'Batal',
+                            ])
+                            ->default('menunggu_survei')
+                            ->required(),
+                        Forms\Components\Textarea::make('catatan')->columnSpanFull(),
+                    ]),
+
+                // ── Data PSB (field baru) ────────────────────────────────
+                Forms\Components\Section::make('Data PSB')
+                    ->columns(2)
+                    ->schema([
+                        Forms\Components\TextInput::make('report_no')
+                            ->label('No. Laporan PSB')
+                            ->placeholder('PSB15226062701'),
+                        Forms\Components\DatePicker::make('jadwal_pasang')
+                            ->label('Jadwal Pasang'),
+                        Forms\Components\TextInput::make('marketing')
+                            ->label('Nama Marketing'),
+                        Forms\Components\Select::make('target_odp_id')
+                            ->label('Target ODP')
+                            ->relationship('targetOdp', 'code')
+                            ->searchable()
+                            ->preload()
+                            ->nullable(),
+                        Forms\Components\Select::make('pipeline_status')
+                            ->label('Status Pipeline')
+                            ->options(PipelineStatus::class)
+                            ->default(PipelineStatus::BELUM->value),
+                    ]),
             ]);
     }
 
@@ -72,12 +103,16 @@ class RegistrationResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('internetPackage.name')
-                    ->numeric()
-                    ->sortable(),
+                // FIX bug lama: ganti internetPackage.name → paket, no_telp → whatsapp
+                Tables\Columns\TextColumn::make('paket')
+                    ->label('Paket')
+                    ->searchable(),
                 Tables\Columns\TextColumn::make('nama')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('no_telp')
+                Tables\Columns\TextColumn::make('whatsapp') // fix: was 'no_telp'
+                    ->label('WhatsApp')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('desa')
                     ->searchable(),
                 Tables\Columns\SelectColumn::make('status')
                     ->options([
@@ -86,13 +121,16 @@ class RegistrationResource extends Resource
                         'aktif' => 'Aktif',
                         'batal' => 'Batal',
                     ])
-                    ->sortable()
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
+                    ->sortable(),
+                Tables\Columns\BadgeColumn::make('pipeline_status')
+                    ->label('Pipeline')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('jadwal_pasang')
+                    ->label('Jadwal Pasang')
+                    ->date()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
+                Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -105,8 +143,42 @@ class RegistrationResource extends Resource
                         'aktif' => 'Aktif',
                         'batal' => 'Batal',
                     ]),
+                Tables\Filters\SelectFilter::make('pipeline_status')
+                    ->label('Pipeline')
+                    ->options(PipelineStatus::class),
             ])
             ->actions([
+                Tables\Actions\Action::make('konversi')
+                    ->label('Konversi ke Pelanggan')
+                    ->icon('heroicon-o-arrow-right-circle')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading('Konversi ke Pelanggan Aktif')
+                    ->modalDescription('Data dari registrasi ini akan disalin ke tabel Pelanggan. Pastikan data sudah lengkap.')
+                    ->visible(fn ($record) => $record->converted_customer_id === null)
+                    ->action(function ($record) {
+                        $customer = Customer::create([
+                            'name'      => $record->nama,
+                            'whatsapp'  => $record->whatsapp,
+                            'nik'       => $record->nik,
+                            'alamat'    => $record->alamat,
+                            'kecamatan' => $record->kecamatan,
+                            'rw'        => $record->rw,
+                            'rt'        => $record->rt,
+                            'subscription_status' => 'aktif',
+                        ]);
+
+                        $record->update([
+                            'converted_customer_id' => $customer->id,
+                            'pipeline_status'       => PipelineStatus::TERPASANG->value,
+                        ]);
+
+                        Notification::make()
+                            ->title('Berhasil dikonversi')
+                            ->body("Pelanggan {$customer->name} telah dibuat.")
+                            ->success()
+                            ->send();
+                    }),
                 Tables\Actions\EditAction::make(),
             ])
             ->headerActions([

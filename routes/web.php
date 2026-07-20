@@ -132,6 +132,20 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // ── Cetak Slip Gaji ──────────────────────────────────────────────────────
+    Route::get('/hrm/payroll/{payroll}/print', function (\App\Models\Payroll $payroll) {
+        $payroll->load('employee');
+        $months = [
+            1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',
+            5=>'Mei',6=>'Juni',7=>'Juli',8=>'Agustus',
+            9=>'September',10=>'Oktober',11=>'November',12=>'Desember',
+        ];
+        $d = \Carbon\Carbon::parse($payroll->period);
+        $periodLabel = ($months[$d->month] ?? '') . ' ' . $d->year;
+
+        return view('payroll.print-slip', compact('payroll', 'periodLabel'));
+    })->name('payroll.print');
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -209,6 +223,44 @@ Route::get('/api/testimonials', function () {
     return response()->json($testimonials)
         ->header('Access-Control-Allow-Origin', '*')
         ->header('Cache-Control', 'public, max-age=60');
+});
+
+// Endpoint untuk Webhook Mikrotik (Tidak kena CSRF karena ada di prefix /api/)
+Route::match(['get', 'post'], '/api/isp/netwatch-webhook', [\App\Http\Controllers\Api\NetwatchWebhookController::class, 'handle'])
+    ->middleware(\App\Http\Middleware\VerifyIspApiKey::class);
+
+// Endpoint untuk Webhook Midtrans (Payment Notification)
+Route::post('/api/isp/midtrans-webhook', [\App\Http\Controllers\Api\MidtransWebhookController::class, 'handle']);
+
+// Endpoint Internal API untuk Typebot / AI Karyawan
+Route::prefix('/api/isp/typebot')
+    ->middleware(\App\Http\Middleware\VerifyIspApiKey::class)
+    ->group(function () {
+    Route::get('/customer', [\App\Http\Controllers\Api\TypebotBridgeController::class, 'getCustomerByPhone']);
+    Route::get('/customer/{id}/invoices', [\App\Http\Controllers\Api\TypebotBridgeController::class, 'getUnpaidInvoices']);
+    Route::post('/invoices/{id}/pay', [\App\Http\Controllers\Api\TypebotBridgeController::class, 'generatePaymentLink']);
+});
+
+// ═══════════════════════════════════════════════════════════════
+// PORTAL PELANGGAN — Login & Dashboard self-service pelanggan ISP
+// ═══════════════════════════════════════════════════════════════
+
+Route::prefix('pelanggan')->name('portal.')->group(function () {
+    Route::get('/login',  [\App\Http\Controllers\CustomerPortalController::class, 'showLogin'])->name('login');
+    Route::post('/login', [\App\Http\Controllers\CustomerPortalController::class, 'login'])->name('login.post');
+    Route::post('/logout',[\App\Http\Controllers\CustomerPortalController::class, 'logout'])->name('logout');
+
+    Route::middleware('auth:member')->group(function () {
+        Route::get('/',              [\App\Http\Controllers\CustomerPortalController::class, 'dashboard'])->name('dashboard');
+        Route::get('/invoice/{id}',  [\App\Http\Controllers\CustomerPortalController::class, 'invoiceDetail'])->name('invoice');
+        // Pembayaran: generate Midtrans Snap Token via AJAX
+        Route::post('/invoice/{id}/pay', [\App\Http\Controllers\CustomerPortalController::class, 'generatePayment'])->name('invoice.pay');
+        // Tiket Gangguan
+        Route::get('/gangguan',      [\App\Http\Controllers\CustomerPortalController::class, 'ticketIndex'])->name('tickets');
+        Route::get('/gangguan/buat', [\App\Http\Controllers\CustomerPortalController::class, 'ticketCreate'])->name('ticket.create');
+        Route::post('/gangguan/buat',[\App\Http\Controllers\CustomerPortalController::class, 'ticketStore'])->name('ticket.store');
+        Route::get('/gangguan/{id}', [\App\Http\Controllers\CustomerPortalController::class, 'ticketDetail'])->name('ticket.show');
+    });
 });
 
 require __DIR__.'/auth.php';

@@ -24,13 +24,13 @@ class PointTransactionChart extends ChartWidget
             
             $penambahan = AcrPointTransaction::whereYear('created_at', $month->year)
                 ->whereMonth('created_at', $month->month)
-                ->where('transaction_type', 'penambahan')
-                ->sum('points');
+                ->where('jenis', 'penambahan')
+                ->sum('jumlah_poin');
                 
             $pengurangan = AcrPointTransaction::whereYear('created_at', $month->year)
                 ->whereMonth('created_at', $month->month)
-                ->where('transaction_type', 'pengurangan')
-                ->sum('points');
+                ->where('jenis', 'pengurangan')
+                ->sum('jumlah_poin');
                 
             $dataPenambahan[] = $penambahan;
             $dataPengurangan[] = $pengurangan;

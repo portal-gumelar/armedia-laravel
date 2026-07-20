@@ -1,0 +1,76 @@
+<?php
+
+namespace App\Providers\Filament;
+
+use Filament\Http\Middleware\Authenticate;
+use Filament\Http\Middleware\AuthenticateSession;
+use Filament\Http\Middleware\DisableBladeIconComponents;
+use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationGroup;
+use Filament\Pages;
+use Filament\Panel;
+use Filament\PanelProvider;
+use Filament\Support\Colors\Color;
+use Filament\Widgets;
+use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
+use Illuminate\Cookie\Middleware\EncryptCookies;
+use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
+use Illuminate\Routing\Middleware\SubstituteBindings;
+use Illuminate\Session\Middleware\StartSession;
+use Illuminate\View\Middleware\ShareErrorsFromSession;
+
+class FinancePanelProvider extends PanelProvider
+{
+    public function panel(Panel $panel): Panel
+    {
+        return $panel
+            ->id('finance')
+            ->path('finance')
+            ->login()
+            ->brandName('ARMEDIA Finance')
+            ->brandLogo('https://ik.imagekit.io/Gumelar/LogO/logo%20pt.png?updatedAt=1778213993513')
+            ->brandLogoHeight('2.5rem')
+            ->colors([
+                'primary' => Color::Emerald,
+            ])
+            ->discoverResources(
+                in: app_path('Filament/Finance/Resources'),
+                for: 'App\\Filament\\Finance\\Resources'
+            )
+            ->discoverPages(
+                in: app_path('Filament/Finance/Pages'),
+                for: 'App\\Filament\\Finance\\Pages'
+            )
+            ->pages([
+                Pages\Dashboard::class,
+                \App\Filament\Pages\CsrReport::class,
+            ])
+            ->discoverWidgets(
+                in: app_path('Filament/Finance/Widgets'),
+                for: 'App\\Filament\\Finance\\Widgets'
+            )
+            ->widgets([
+                Widgets\AccountWidget::class,
+            ])
+            ->navigationGroups([
+                NavigationGroup::make()->label('Keuangan'),
+                NavigationGroup::make()->label('Laporan'),
+                NavigationGroup::make()->label('CSR & Komunitas'),
+                NavigationGroup::make()->label('Pengaturan'),
+            ])
+            ->middleware([
+                EncryptCookies::class,
+                AddQueuedCookiesToResponse::class,
+                StartSession::class,
+                AuthenticateSession::class,
+                ShareErrorsFromSession::class,
+                VerifyCsrfToken::class,
+                SubstituteBindings::class,
+                DisableBladeIconComponents::class,
+                DispatchServingFilamentEvent::class,
+            ])
+            ->authMiddleware([
+                Authenticate::class,
+            ]);
+    }
+}
