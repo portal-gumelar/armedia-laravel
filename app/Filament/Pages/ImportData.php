@@ -61,7 +61,7 @@ class ImportData extends Page implements HasForms
         try {
             // Run the artisan command
             Artisan::call('app:import-master-data', [
-                'file' => $path
+                'path' => $path
             ]);
 
             $output = Artisan::output();
