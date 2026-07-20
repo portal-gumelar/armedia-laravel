@@ -8,4 +8,4 @@ cmds = [
 ]
 
 [start]
-cmd = "php-fpm -D && nginx -c /app/nginx.conf -g 'daemon off;'"
+cmd = "php-fpm -y /assets/php-fpm.conf -D && nginx -c /app/nginx.conf -g 'daemon off;'"
