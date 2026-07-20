@@ -26,7 +26,11 @@ class TicketResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        return (string) static::getModel()::where('status', TicketStatus::OPEN->value)->count() ?: null;
+        try {
+            return (string) static::getModel()::where('status', TicketStatus::OPEN->value)->count() ?: null;
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     public static function getNavigationBadgeColor(): ?string
