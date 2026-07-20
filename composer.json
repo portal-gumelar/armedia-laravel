@@ -8,7 +8,7 @@
     "require": {
         "php": "^8.4",
         "bezhansalleh/filament-shield": "^3.9",
-        "evilbox/routeros-api-php": "^1.6",
+        "evilfreelancer/routeros-api-php": "^1.6",
         "filament/filament": "^3.2",
         "inertiajs/inertia-laravel": "^2.0",
         "laravel/framework": "^13.8",
