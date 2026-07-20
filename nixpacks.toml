@@ -1,12 +1,11 @@
-[providers]
-  php = {}
+providers = ["php"]
 
 [phases.build]
-  cmds = [
-    "composer install --no-interaction --prefer-dist --optimize-autoloader",
-    "npm ci",
-    "npm run build"
-  ]
+cmds = [
+  "composer install --no-interaction --prefer-dist --optimize-autoloader",
+  "npm ci",
+  "npm run build"
+]
 
 [start]
-  cmd = "php-fpm -D && nginx -c /app/nginx.conf -g 'daemon off;'"
+cmd = "php-fpm -D && nginx -c /app/nginx.conf -g 'daemon off;'"
