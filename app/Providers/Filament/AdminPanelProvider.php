@@ -57,7 +57,8 @@ class AdminPanelProvider extends PanelProvider
                      ->label('Pengaturan'),
             ])
             ->plugins([
-                \BezhanSalleh\FilamentShield\FilamentShieldPlugin::make(),
+                \BezhanSalleh\FilamentShield\FilamentShieldPlugin::make()
+                    ->shieldResource(navigationGroup: 'Manajemen Akses'),
             ])
             ->middleware([
                 EncryptCookies::class,
