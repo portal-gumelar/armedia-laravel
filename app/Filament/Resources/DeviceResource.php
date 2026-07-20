@@ -128,10 +128,11 @@ class DeviceResource extends Resource
                                                 Forms\Components\TextInput::make('hp')->label('No HP')->default($record->customer?->whatsapp)->required(),
                                                 Forms\Components\TextInput::make('ssid')->label('SSID (Nama WiFi)')->required(),
                                             ]),
-                                            Forms\Components\Grid::make(3)->schema([
-                                                Forms\Components\TextInput::make('ip_address')->label('IP Address Pelanggan')->required(),
+                                            Forms\Components\Grid::make(4)->schema([
+                                                Forms\Components\TextInput::make('ip_address')->label('IP Address')->required(),
                                                 Forms\Components\TextInput::make('rt_rw')->label('RT/RW')->required(),
                                                 Forms\Components\TextInput::make('desa')->label('Desa')->default($record->customer?->village?->name)->required(),
+                                                Forms\Components\TextInput::make('teknisi')->label('Nama Teknisi')->placeholder('Contoh: AGAN')->required(),
                                             ]),
                                             Forms\Components\Fieldset::make('MikroTik Detail')->schema([
                                                 Forms\Components\TextInput::make('mikrotik_ip')->label('IP MikroTik')->required()->default('49.156.62.10'),

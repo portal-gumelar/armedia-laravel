@@ -145,7 +145,7 @@ class ProvisionOltDeviceJob implements ShouldQueue
         $ssh = new MikrotikSshService($d['mikrotik_ip'], $d['mikrotik_user'], $d['mikrotik_pass'], $d['mikrotik_port']);
         $ssh->connect();
 
-        $comment = "{$d['nama']} - {$d['sn']} - {$d['hp']} - {$d['ssid']} - {$d['rt_rw']} - {$d['desa']}";
+        $comment = "{$d['nama']} - {$d['sn']} - {$d['hp']} - {$d['ssid']} - {$d['rt_rw']} - {$d['desa']} - {$d['teknisi']}";
         
         if ($d['is_replace']) {
             // Update existing entry
