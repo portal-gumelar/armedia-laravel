@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('prorata_rates', function (Blueprint $table) {
             $table->id();
             $table->unsignedTinyInteger('tanggal_pasang'); // 1-30
-            $table->foreignId('product_id')->constrained('products')->cascadeOnDelete();
+            $table->foreignId('product_id')->constrained('internet_packages')->cascadeOnDelete();
             $table->unsignedBigInteger('jumlah');
             $table->timestamps();
 
