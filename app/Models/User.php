@@ -14,9 +14,12 @@ use Spatie\Permission\Traits\HasRoles;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
+
 #[Fillable(['name', 'email', 'password', 'avatar_url'])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable implements HasAvatar
+class User extends Authenticatable implements HasAvatar, FilamentUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, HasRoles, LogsActivity;
@@ -31,6 +34,12 @@ class User extends Authenticatable implements HasAvatar
     public function getFilamentAvatarUrl(): ?string
     {
         return $this->avatar_url ? url('storage/' . $this->avatar_url) : null;
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        // Izinkan semua user terdaftar untuk masuk ke panel (dibatasi oleh Role Spatie)
+        return true;
     }
 
     /**
