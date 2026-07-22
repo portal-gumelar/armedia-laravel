@@ -28,30 +28,63 @@ class CsrDistributionResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('no')
-                    ->numeric(),
-                Forms\Components\TextInput::make('nama'),
-                Forms\Components\TextInput::make('provinsi'),
-                Forms\Components\TextInput::make('kabupaten'),
-                Forms\Components\TextInput::make('kecamatan'),
-                Forms\Components\TextInput::make('desa'),
-                Forms\Components\TextInput::make('rw'),
-                Forms\Components\TextInput::make('rt'),
-                Forms\Components\TextInput::make('total')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                Forms\Components\TextInput::make('dana_desa')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                Forms\Components\TextInput::make('dana_rt')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-                Forms\Components\TextInput::make('status_pencairan')
-                    ->required(),
-                Forms\Components\DatePicker::make('tgl_bayar'),
+                Forms\Components\Section::make('Informasi Penerima / Wilayah')
+                    ->schema([
+                        Forms\Components\TextInput::make('no')
+                            ->label('Nomor / ID')
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('nama')
+                            ->label('Nama Penerima / Wilayah')
+                            ->required(),
+                        Forms\Components\Grid::make(3)
+                            ->schema([
+                                Forms\Components\TextInput::make('provinsi')
+                                    ->default('Jawa Tengah'),
+                                Forms\Components\TextInput::make('kabupaten')
+                                    ->default('Banyumas'),
+                                Forms\Components\TextInput::make('kecamatan'),
+                                Forms\Components\TextInput::make('desa'),
+                                Forms\Components\TextInput::make('rw'),
+                                Forms\Components\TextInput::make('rt'),
+                            ]),
+                    ]),
+
+                Forms\Components\Section::make('Rincian Dana')
+                    ->schema([
+                        Forms\Components\TextInput::make('total')
+                            ->label('Total (Rp)')
+                            ->required()
+                            ->numeric()
+                            ->prefix('Rp')
+                            ->default(0),
+                        Forms\Components\TextInput::make('dana_desa')
+                            ->label('Dana Desa (Rp)')
+                            ->required()
+                            ->numeric()
+                            ->prefix('Rp')
+                            ->default(0),
+                        Forms\Components\TextInput::make('dana_rt')
+                            ->label('Dana RT (Rp)')
+                            ->required()
+                            ->numeric()
+                            ->prefix('Rp')
+                            ->default(0),
+                    ])->columns(3),
+
+                Forms\Components\Section::make('Status Pencairan')
+                    ->schema([
+                        Forms\Components\Select::make('status_pencairan')
+                            ->label('Status')
+                            ->options([
+                                'Belum Cair' => 'Belum Cair',
+                                'Sudah Cair' => 'Sudah Cair',
+                                'Batal' => 'Batal',
+                            ])
+                            ->default('Belum Cair')
+                            ->required(),
+                        Forms\Components\DatePicker::make('tgl_bayar')
+                            ->label('Tanggal Pembayaran'),
+                    ])->columns(2),
             ]);
     }
 
@@ -59,35 +92,43 @@ class CsrDistributionResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('no')
-                    ->numeric()
-                    ->sortable(),
                 Tables\Columns\TextColumn::make('nama')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('provinsi')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('kabupaten')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('kecamatan')
-                    ->searchable(),
+                    ->label('Penerima/Wilayah')
+                    ->searchable()
+                    ->sortable()
+                    ->weight('bold'),
                 Tables\Columns\TextColumn::make('desa')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('rw')
+                    ->label('Desa/Kelurahan')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('rt')
-                    ->searchable(),
+                    ->label('RT/RW')
+                    ->formatStateUsing(fn ($record) => "RT {$record->rt} / RW {$record->rw}")
+                    ->searchable(['rt', 'rw']),
                 Tables\Columns\TextColumn::make('total')
-                    ->numeric()
+                    ->label('Total Dana')
+                    ->money('IDR')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('dana_desa')
-                    ->numeric()
-                    ->sortable(),
+                    ->label('Dana Desa')
+                    ->money('IDR')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('dana_rt')
-                    ->numeric()
-                    ->sortable(),
+                    ->label('Dana RT')
+                    ->money('IDR')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('status_pencairan')
-                    ->searchable(),
+                    ->label('Status')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'Sudah Cair' => 'success',
+                        'Belum Cair' => 'warning',
+                        'Batal' => 'danger',
+                        default => 'gray',
+                    }),
                 Tables\Columns\TextColumn::make('tgl_bayar')
+                    ->label('Tgl Bayar')
                     ->date()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
