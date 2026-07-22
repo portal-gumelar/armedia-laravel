@@ -117,12 +117,19 @@ class MitraResource extends Resource
                     ->label('Komisi')
                     ->suffix('%')
                     ->sortable(),
-                Tables\Columns\BadgeColumn::make('status')
+                Tables\Columns\TextColumn::make('status')
                     ->label('Status')
-                    ->colors([
-                        'success' => 'aktif',
-                        'danger'  => 'nonaktif',
-                    ]),
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'aktif' => 'success',
+                        'nonaktif' => 'danger',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'aktif' => 'Aktif',
+                        'nonaktif' => 'Non-Aktif',
+                        default => $state,
+                    }),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
