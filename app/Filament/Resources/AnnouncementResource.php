@@ -25,29 +25,32 @@ class AnnouncementResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('title')
-                    ->label('Judul Pengumuman')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\Select::make('type')
-                    ->label('Tipe')
-                    ->options([
-                        'info' => 'Informasi',
-                        'warning' => 'Peringatan / Maintenance',
-                        'promo' => 'Promo',
-                    ])
-                    ->required()
-                    ->default('info'),
-                Forms\Components\DateTimePicker::make('expires_at')
-                    ->label('Berlaku Sampai')
-                    ->nullable(),
-                Forms\Components\Toggle::make('is_active')
-                    ->label('Aktif')
-                    ->default(true),
-                Forms\Components\RichEditor::make('content')
-                    ->label('Isi Pengumuman')
-                    ->required()
-                    ->columnSpanFull(),
+                Forms\Components\Section::make('Informasi Pengumuman')
+                    ->schema([
+                        Forms\Components\TextInput::make('title')
+                            ->label('Judul Pengumuman')
+                            ->required()
+                            ->maxLength(255),
+                        Forms\Components\Select::make('type')
+                            ->label('Tipe')
+                            ->options([
+                                'info' => 'Informasi',
+                                'warning' => 'Peringatan / Maintenance',
+                                'promo' => 'Promo',
+                            ])
+                            ->required()
+                            ->default('info'),
+                        Forms\Components\DateTimePicker::make('expires_at')
+                            ->label('Berlaku Sampai')
+                            ->nullable(),
+                        Forms\Components\Toggle::make('is_active')
+                            ->label('Aktif')
+                            ->default(true),
+                        Forms\Components\RichEditor::make('content')
+                            ->label('Isi Pengumuman')
+                            ->required()
+                            ->columnSpanFull(),
+                    ])->columns(2),
             ]);
     }
 
