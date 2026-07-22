@@ -15,25 +15,25 @@ class DashboardStatsOverview extends BaseWidget
     protected function getStats(): array
     {
         // 1. Total Active Customers
-        $activeCustomers = Customer::where('status', '!=', 'Isolir')->count();
+        $activeCustomers = Customer::where('subscription_status', '!=', 'isolir')->count();
 
         // 2. Total Isolated Customers
-        $isolatedCustomers = Customer::where('status', 'Isolir')->count();
+        $isolatedCustomers = Customer::where('subscription_status', 'isolir')->count();
 
         // 3. Unpaid Invoices Total for current month
         $currentMonth = Carbon::now()->month;
         $currentYear = Carbon::now()->year;
         
-        $unpaidTotal = Invoice::where('payment_status', '!=', 'Lunas')
+        $unpaidTotal = Invoice::where('status', '!=', 'lunas')
             ->whereMonth('created_at', $currentMonth)
             ->whereYear('created_at', $currentYear)
-            ->sum('total_amount');
+            ->sum('amount');
 
         // 4. Monthly Income (Paid Invoices)
-        $incomeTotal = Invoice::where('payment_status', 'Lunas')
+        $incomeTotal = Invoice::where('status', 'lunas')
             ->whereMonth('created_at', $currentMonth)
             ->whereYear('created_at', $currentYear)
-            ->sum('total_amount');
+            ->sum('amount');
 
         return [
             Stat::make('Pelanggan Aktif', $activeCustomers)
