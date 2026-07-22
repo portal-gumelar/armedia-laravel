@@ -88,6 +88,16 @@ class TicketResource extends Resource
             Forms\Components\Section::make('Respon Teknisi')
                 ->collapsed()
                 ->schema([
+                    Forms\Components\Select::make('assigned_to')
+                        ->label('Ditugaskan Kepada (Teknisi)')
+                        ->relationship('assignedTo', 'name', fn (Builder $query) => $query->role('teknisi'))
+                        ->searchable()
+                        ->preload(),
+
+                    Forms\Components\DateTimePicker::make('scheduled_at')
+                        ->label('Jadwal Kunjungan')
+                        ->native(false),
+
                     Forms\Components\Textarea::make('technician_notes')
                         ->label('Catatan Tindakan Teknisi')
                         ->rows(3)
@@ -138,6 +148,18 @@ class TicketResource extends Resource
                     ->sortable()
                     ->since(),
 
+                Tables\Columns\TextColumn::make('assignedTo.name')
+                    ->label('Teknisi')
+                    ->searchable()
+                    ->placeholder('Belum di-assign')
+                    ->badge()
+                    ->color('info'),
+
+                Tables\Columns\TextColumn::make('scheduled_at')
+                    ->label('Jadwal Kunjungan')
+                    ->dateTime('d M Y, H:i')
+                    ->placeholder('—'),
+
                 Tables\Columns\TextColumn::make('resolved_at')
                     ->label('Diselesaikan')
                     ->dateTime('d M Y, H:i')
@@ -154,6 +176,9 @@ class TicketResource extends Resource
                 Tables\Filters\SelectFilter::make('category')
                     ->options(TicketCategory::class)
                     ->label('Kategori'),
+                Tables\Filters\SelectFilter::make('assigned_to')
+                    ->relationship('assignedTo', 'name', fn (Builder $query) => $query->role('teknisi'))
+                    ->label('Teknisi'),
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
@@ -244,11 +269,17 @@ class TicketResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
+        $query = parent::getEloquentQuery()
             ->with(['customer.village'])
             ->withoutGlobalScopes([SoftDeletingScope::class])
             ->orderByRaw("CASE priority WHEN 'urgent' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 ELSE 5 END")
             ->orderBy('created_at', 'asc');
+
+        if (auth()->user() && auth()->user()->hasRole('teknisi') && !auth()->user()->hasRole(['super_admin', 'admin', 'cs'])) {
+            $query->where('assigned_to', auth()->id());
+        }
+
+        return $query;
     }
 
     public static function getRelations(): array
