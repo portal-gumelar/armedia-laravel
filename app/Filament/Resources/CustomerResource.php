@@ -478,6 +478,80 @@ class CustomerResource extends Resource
                                 ->send();
                         }
                     }),
+
+                Tables\Actions\Action::make('sync_mikrotik')
+                    ->label('Sync PPPoE')
+                    ->icon('heroicon-o-arrow-path')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading('Sinkronisasi Akun PPPoE ke Mikrotik')
+                    ->modalDescription('Tindakan ini akan (memaksa) membuat ulang atau mengupdate secret PPPoE pelanggan di Router Mikrotik sesuai dengan data pada sistem.')
+                    ->visible(fn ($record) => !empty($record->pppoe_username) && $record->mikrotik_server_id)
+                    ->action(function ($record, \Filament\Notifications\Notification $notification) {
+                        try {
+                            $mtService = new \App\Services\MikrotikService();
+                            $success = $mtService->createPppoeSecret($record);
+                            
+                            if ($success) {
+                                $notification->title('Sinkronisasi Berhasil')
+                                    ->body("Akun PPPoE {$record->pppoe_username} sudah dikirim ke Mikrotik.")
+                                    ->success()
+                                    ->send();
+                            } else {
+                                throw new \Exception("Gagal menghubungi server Mikrotik.");
+                            }
+                        } catch (\Exception $e) {
+                            $notification->title('Gagal Sinkronisasi')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
+
+                Tables\Actions\Action::make('remote_acs')
+                    ->label('Remote ACS (WiFi)')
+                    ->icon('heroicon-o-wifi')
+                    ->color('warning')
+                    ->form([
+                        \Filament\Forms\Components\TextInput::make('ssid')
+                            ->label('Nama WiFi (SSID)')
+                            ->default(fn ($record) => $record->ssid ?? 'Pelanggan ' . $record->name)
+                            ->required(),
+                        \Filament\Forms\Components\TextInput::make('password_wifi')
+                            ->label('Password WiFi')
+                            ->default(fn ($record) => $record->password_wifi ?? '12345678')
+                            ->required(),
+                    ])
+                    ->modalHeading('Konfigurasi WiFi Modem (GenieACS)')
+                    ->modalDescription('Masukkan nama WiFi dan password baru. Sistem akan meremote modem pelanggan secara otomatis via TR-069.')
+                    ->visible(fn ($record) => !empty($record->sn))
+                    ->action(function ($record, array $data, \Filament\Notifications\Notification $notification) {
+                        try {
+                            // Update local DB
+                            $record->update([
+                                'ssid' => $data['ssid'],
+                                'password_wifi' => $data['password_wifi'],
+                            ]);
+
+                            // Send to ACS
+                            $acsService = new \App\Services\GenieAcsService();
+                            $result = $acsService->setWifiConfig($record->sn, $data['ssid'], $data['password_wifi']);
+                            
+                            if ($result['success']) {
+                                $notification->title('Perintah ACS Dikirim')
+                                    ->body($result['message'])
+                                    ->success()
+                                    ->send();
+                            } else {
+                                throw new \Exception("Gagal menghubungi server GenieACS.");
+                            }
+                        } catch (\Exception $e) {
+                            $notification->title('Gagal Konfigurasi WiFi')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
                     
                 Tables\Actions\Action::make('chat_wa')
                     ->label('Sapa / Chat WA')

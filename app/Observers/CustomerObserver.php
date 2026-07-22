@@ -13,16 +13,15 @@ class CustomerObserver
     public function created(Customer $customer): void
     {
         $this->syncToRadius($customer);
+        $this->syncToMikrotik($customer);
     }
 
-    /**
-     * Handle the Customer "updated" event.
-     */
     public function updated(Customer $customer): void
     {
         // Jika password atau username pppoe berubah, atau status berlangganan berubah
-        if ($customer->isDirty('username_pppoe') || $customer->isDirty('password_pppoe') || $customer->isDirty('subscription_status')) {
+        if ($customer->isDirty('pppoe_username') || $customer->isDirty('pppoe_password') || $customer->isDirty('subscription_status') || $customer->isDirty('mikrotik_server_id')) {
             $this->syncToRadius($customer);
+            $this->syncToMikrotik($customer);
         }
     }
 
@@ -31,15 +30,18 @@ class CustomerObserver
      */
     public function deleted(Customer $customer): void
     {
-        if ($customer->username_pppoe) {
+        if ($customer->pppoe_username) {
             $radius = new RadiusService();
-            $radius->deleteUser($customer->username_pppoe);
+            $radius->deleteUser($customer->pppoe_username);
+            
+            $mikrotik = new \App\Services\MikrotikService();
+            $mikrotik->removePppoeSecret($customer);
         }
     }
 
     private function syncToRadius(Customer $customer): void
     {
-        if (!$customer->username_pppoe || !$customer->password_pppoe) {
+        if (!$customer->pppoe_username || !$customer->pppoe_password) {
             return;
         }
 
@@ -51,6 +53,14 @@ class CustomerObserver
             $profile = 'ISOLIR';
         }
 
-        $radius->createUser($customer->username_pppoe, $customer->password_pppoe, $profile);
+        $radius->createUser($customer->pppoe_username, $customer->pppoe_password, $profile);
+    }
+
+    private function syncToMikrotik(Customer $customer): void
+    {
+        if ($customer->mikrotik_server_id && $customer->pppoe_username) {
+            $mikrotik = new \App\Services\MikrotikService();
+            $mikrotik->createPppoeSecret($customer);
+        }
     }
 }

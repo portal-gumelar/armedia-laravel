@@ -275,4 +275,82 @@ class MikrotikService
             return false;
         }
     }
+
+    /**
+     * Auto-provision: Create PPPoE Secret for new active customer.
+     */
+    public function createPppoeSecret(Customer $customer): bool
+    {
+        if (!$customer->mikrotikServer || !$customer->pppoe_username) {
+            return false;
+        }
+
+        $client = $this->connect($customer->mikrotikServer);
+        if (!$client) {
+            return false;
+        }
+
+        try {
+            // Check if exist
+            $query = (new Query('/ppp/secret/print'))->where('name', $customer->pppoe_username);
+            $existing = $client->query($query)->read();
+
+            if (empty($existing)) {
+                $client->query(
+                    (new Query('/ppp/secret/add'))
+                        ->equal('name', $customer->pppoe_username)
+                        ->equal('password', $customer->pppoe_password ?? '123456')
+                        ->equal('profile', $customer->profile ?? 'default')
+                        ->equal('service', 'pppoe')
+                        ->equal('comment', "Auto-provision: {$customer->id_arm} - {$customer->name}")
+                )->read();
+            } else {
+                // Update existing
+                $client->query(
+                    (new Query('/ppp/secret/set'))
+                        ->equal('.id', $existing[0]['.id'])
+                        ->equal('password', $customer->pppoe_password ?? '123456')
+                        ->equal('profile', $customer->profile ?? 'default')
+                        ->equal('comment', "Auto-provision: {$customer->id_arm} - {$customer->name}")
+                )->read();
+            }
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error("Failed to create PPPoE Secret for Customer {$customer->id_arm}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Remove PPPoE Secret from Mikrotik.
+     */
+    public function removePppoeSecret(Customer $customer): bool
+    {
+        if (!$customer->mikrotikServer || !$customer->pppoe_username) {
+            return false;
+        }
+
+        $client = $this->connect($customer->mikrotikServer);
+        if (!$client) {
+            return false;
+        }
+
+        try {
+            $query = (new Query('/ppp/secret/print'))->where('name', $customer->pppoe_username);
+            $existing = $client->query($query)->read();
+
+            if (!empty($existing)) {
+                $client->query(
+                    (new Query('/ppp/secret/remove'))
+                        ->equal('.id', $existing[0]['.id'])
+                )->read();
+            }
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error("Failed to remove PPPoE Secret for Customer {$customer->id_arm}: " . $e->getMessage());
+            return false;
+        }
+    }
 }
