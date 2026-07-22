@@ -121,13 +121,14 @@ class ArticleResource extends Resource
                     ->weight('bold'),
                 Tables\Columns\TextColumn::make('category')->badge()
                     ->label('Kategori')
-                    ->color([
-                        'warning'  => 'TIPS & TRIK',
-                        'success'  => 'TEKNOLOGI',
-                        'danger'   => 'PROMO',
-                        'primary'  => 'INFORMASI',
-                        'secondary'=> 'PENGUMUMAN',
-                    ])
+                    ->color(fn (string $state): string => match ($state) {
+                        'TIPS & TRIK' => 'warning',
+                        'TEKNOLOGI'   => 'success',
+                        'PROMO'       => 'danger',
+                        'INFORMASI'   => 'primary',
+                        'PENGUMUMAN'  => 'secondary',
+                        default       => 'gray',
+                    })
                     ->searchable(),
                 Tables\Columns\TextColumn::make('excerpt')
                     ->label('Ringkasan')
