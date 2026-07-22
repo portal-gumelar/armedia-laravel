@@ -7,6 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class AcrPointTransaction extends Model
 {
-    /** @use HasFactory<\Database\Factories\AcrPointTransactionFactory> */
     use HasFactory;
+
+    protected $guarded = [];
+
+    public function member()
+    {
+        return $this->belongsTo(\App\Models\AcrMember::class, 'id_member');
+    }
 }

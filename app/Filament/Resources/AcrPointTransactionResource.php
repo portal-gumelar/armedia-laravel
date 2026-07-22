@@ -27,17 +27,27 @@ class AcrPointTransactionResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('id_member')
-                    ->required()
-                    ->numeric(),
-                Forms\Components\TextInput::make('jenis')
-                    ->required()
-                    ->maxLength(255),
+                Forms\Components\Select::make('id_member')
+                    ->label('Member ACR')
+                    ->relationship('member', 'nama')
+                    ->searchable()
+                    ->preload()
+                    ->required(),
+                Forms\Components\Select::make('jenis')
+                    ->label('Jenis Transaksi')
+                    ->options([
+                        'tambah' => 'Tambah Poin (+)',
+                        'tukar' => 'Tukar Poin (-)',
+                    ])
+                    ->required(),
                 Forms\Components\TextInput::make('jumlah_poin')
+                    ->label('Jumlah Poin')
                     ->required()
                     ->numeric(),
-                Forms\Components\TextInput::make('keterangan')
-                    ->maxLength(255),
+                Forms\Components\Textarea::make('keterangan')
+                    ->label('Keterangan')
+                    ->maxLength(255)
+                    ->columnSpanFull(),
             ]);
     }
 
@@ -45,16 +55,32 @@ class AcrPointTransactionResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('id_member')
-                    ->numeric()
+                Tables\Columns\TextColumn::make('member.nama')
+                    ->label('Nama Member')
+                    ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('jenis')
+                    ->label('Jenis')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'tambah' => 'success',
+                        'tukar' => 'warning',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'tambah' => 'Tambah',
+                        'tukar' => 'Tukar',
+                        default => $state,
+                    })
                     ->searchable(),
                 Tables\Columns\TextColumn::make('jumlah_poin')
+                    ->label('Jumlah Poin')
                     ->numeric()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('keterangan')
-                    ->searchable(),
+                    ->label('Keterangan')
+                    ->searchable()
+                    ->limit(30),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

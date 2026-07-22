@@ -45,6 +45,6 @@ class AcrMember extends Authenticatable
 
     public function pointTransactions(): HasMany
     {
-        return $this->hasMany(\App\Models\AcrPointTransaction::class, 'member_id');
+        return $this->hasMany(\App\Models\AcrPointTransaction::class, 'id_member');
     }
 }
