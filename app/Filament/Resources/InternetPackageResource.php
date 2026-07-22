@@ -68,7 +68,7 @@ class InternetPackageResource extends Resource
                 Tables\Columns\TextColumn::make('code')
                     ->label('Kode')
                     ->searchable(),
-                Tables\Columns\BadgeColumn::make('brand')
+                Tables\Columns\TextColumn::make('brand')->badge()
                     ->label('Brand'),
                 Tables\Columns\TextColumn::make('speed_mbps')
                     ->label('Mbps')

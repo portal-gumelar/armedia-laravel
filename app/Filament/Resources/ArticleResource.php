@@ -119,9 +119,9 @@ class ArticleResource extends Resource
                     ->searchable()
                     ->limit(40)
                     ->weight('bold'),
-                Tables\Columns\BadgeColumn::make('category')
+                Tables\Columns\TextColumn::make('category')->badge()
                     ->label('Kategori')
-                    ->colors([
+                    ->color([
                         'warning'  => 'TIPS & TRIK',
                         'success'  => 'TEKNOLOGI',
                         'danger'   => 'PROMO',

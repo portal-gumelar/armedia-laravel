@@ -122,7 +122,7 @@ class RegistrationResource extends Resource
                         'batal' => 'Batal',
                     ])
                     ->sortable(),
-                Tables\Columns\BadgeColumn::make('pipeline_status')
+                Tables\Columns\TextColumn::make('pipeline_status')->badge()
                     ->label('Pipeline')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('jadwal_pasang')

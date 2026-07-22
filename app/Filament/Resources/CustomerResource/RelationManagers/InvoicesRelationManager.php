@@ -59,7 +59,7 @@ class InvoicesRelationManager extends RelationManager
                     ->label('Tagihan')
                     ->money('IDR')
                     ->sortable(),
-                Tables\Columns\BadgeColumn::make('status')
+                Tables\Columns\TextColumn::make('status')->badge()
                     ->label('Status'),
                 Tables\Columns\TextColumn::make('paid_at')
                     ->label('Tgl Bayar')

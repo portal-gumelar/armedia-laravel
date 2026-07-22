@@ -80,7 +80,7 @@ class DeviceResource extends Resource
                     ->label('S/N')
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\BadgeColumn::make('status')
+                Tables\Columns\TextColumn::make('status')->badge()
                     ->label('Status')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('customer.name')

@@ -86,7 +86,7 @@ class InvoiceResource extends Resource
                     ->label('Tagihan')
                     ->money('IDR')
                     ->sortable(),
-                Tables\Columns\BadgeColumn::make('status')
+                Tables\Columns\TextColumn::make('status')->badge()
                     ->label('Status')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('paid_at')

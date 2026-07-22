@@ -114,9 +114,9 @@ class OdpResource extends Resource
                     ->label('Dipakai')
                     ->counts('customers')
                     ->sortable(),
-                Tables\Columns\BadgeColumn::make('status')
+                Tables\Columns\TextColumn::make('status')->badge()
                     ->label('Status')
-                    ->colors([
+                    ->color([
                         'success' => 'aktif',
                         'gray'    => 'nonaktif',
                     ]),

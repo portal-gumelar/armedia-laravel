@@ -308,9 +308,9 @@ class PayrollResource extends Resource
                     ->color('success')
                     ->sortable(),
 
-                Tables\Columns\BadgeColumn::make('status')
+                Tables\Columns\TextColumn::make('status')->badge()
                     ->label('Status')
-                    ->colors([
+                    ->color([
                         'gray'    => 'draft',
                         'info'    => 'approved',
                         'success' => 'paid',

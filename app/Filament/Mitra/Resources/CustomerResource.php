@@ -74,7 +74,7 @@ class CustomerResource extends Resource
                     ->label('WhatsApp'),
                 Tables\Columns\TextColumn::make('internetPackage.name')
                     ->label('Paket'),
-                Tables\Columns\BadgeColumn::make('subscription_status')
+                Tables\Columns\TextColumn::make('subscription_status')->badge()
                     ->label('Status'),
             ])
             ->actions([

@@ -228,10 +228,10 @@ class CustomerResource extends Resource
                     ->label('IP')
                     ->searchable()
                     ->toggleable(),
-                Tables\Columns\BadgeColumn::make('subscription_status')
+                Tables\Columns\TextColumn::make('subscription_status')->badge()
                     ->label('Status Langganan')
                     ->sortable(),
-                Tables\Columns\BadgeColumn::make('monitoring_status')
+                Tables\Columns\TextColumn::make('monitoring_status')->badge()
                     ->label('Monitoring')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('whatsapp')

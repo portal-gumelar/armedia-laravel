@@ -79,9 +79,9 @@ class MarketingFeeResource extends Resource
                     ->label('Fee')
                     ->money('IDR')
                     ->sortable(),
-                Tables\Columns\BadgeColumn::make('status')
+                Tables\Columns\TextColumn::make('status')->badge()
                     ->label('Status')
-                    ->colors([
+                    ->color([
                         'warning' => 'pending',
                         'success' => 'dibayar',
                         'danger'  => 'batal',

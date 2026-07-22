@@ -46,8 +46,8 @@ class InvoiceResource extends Resource
                 Tables\Columns\TextColumn::make('customer.name')->label('Pelanggan')->searchable(),
                 Tables\Columns\TextColumn::make('period')->label('Periode')->date('M Y'),
                 Tables\Columns\TextColumn::make('amount')->label('Nominal')->money('IDR'),
-                Tables\Columns\BadgeColumn::make('status')->label('Status')
-                    ->colors(['danger' => 'unpaid', 'success' => 'paid']),
+                Tables\Columns\TextColumn::make('status')->badge()->label('Status')
+                    ->color(['danger' => 'unpaid', 'success' => 'paid']),
             ])
             ->actions([Tables\Actions\EditAction::make()]);
     }

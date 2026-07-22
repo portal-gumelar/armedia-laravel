@@ -35,7 +35,7 @@ class NetwatchMonitoringResource extends Resource
     {
         return $table->columns([
             Tables\Columns\TextColumn::make('ip_address')->searchable(),
-            Tables\Columns\BadgeColumn::make('status_koneksi')->colors(['success' => 'UP', 'danger' => 'DOWN']),
+            Tables\Columns\TextColumn::make('status_koneksi')->badge()->color(['success' => 'UP', 'danger' => 'DOWN']),
             Tables\Columns\TextColumn::make('customer.nama')->label('Pelanggan')->searchable(),
             Tables\Columns\TextColumn::make('desa'),
             Tables\Columns\TextColumn::make('paket_mbps')->suffix(' Mbps'),

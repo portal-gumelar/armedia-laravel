@@ -24,9 +24,9 @@ class NetwatchLogsRelationManager extends RelationManager
             ->columns([
                 Tables\Columns\TextColumn::make('ip_address')
                     ->label('IP Address'),
-                Tables\Columns\BadgeColumn::make('status')
+                Tables\Columns\TextColumn::make('status')->badge()
                     ->label('Status')
-                    ->colors([
+                    ->color([
                         'success' => 'up',
                         'danger'  => 'down',
                     ]),
