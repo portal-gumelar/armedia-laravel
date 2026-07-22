@@ -18,12 +18,12 @@ class InternetPackageResource extends Resource
     protected static ?string $model = InternetPackage::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-wifi';
-    protected static ?string $navigationGroup = 'Pengaturan & Sistem';  // dipindah dari Konten Website
-    protected static ?string $navigationLabel = 'Paket Internet';
+    protected static ?string $navigationGroup = 'Operasional ISP';
+    protected static ?string $navigationLabel = 'Paket / Produk';
     protected static ?string $pluralModelLabel = 'Paket Internet';
     protected static ?string $modelLabel = 'Paket Internet';
     protected static ?string $recordTitleAttribute = 'nama_paket';
-    protected static ?int    $navigationSort = 4;
+    protected static ?int    $navigationSort = 2;
 
     public static function form(Form $form): Form
     {
@@ -63,27 +63,37 @@ class InternetPackageResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('nama_paket')
-                    ->searchable(),
                 Tables\Columns\TextColumn::make('code')
                     ->label('Kode')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('nama_paket')
+                    ->label('Nama Paket')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('brand')->badge()
                     ->label('Brand'),
                 Tables\Columns\TextColumn::make('speed_mbps')
-                    ->label('Mbps')
+                    ->label('Kapasitas (Mbps)')
+                    ->state(fn ($record) => $record->speed_mbps ?? $record->kecepatan)
+                    ->suffix(' Mbps')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('kecepatan')
-                    ->searchable()
-                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('harga')
+                    ->label('Harga')
                     ->money('IDR')
                     ->sortable(),
+                Tables\Columns\TextColumn::make('customers_count')
+                    ->counts('customers')
+                    ->label('Jml Pelanggan')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('ip_allocation')
+                    ->label('Alokasi IP')
+                    ->searchable(),
+                Tables\Columns\IconColumn::make('is_active')
+                    ->label('Aktif')
+                    ->boolean(),
                 Tables\Columns\TextColumn::make('keterangan_promo')
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\IconColumn::make('is_active')
-                    ->boolean(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
