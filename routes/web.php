@@ -14,23 +14,8 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
-Route::get('/setup-admin', function() {
-    $user = User::updateOrCreate(
-        ['email' => 'admin@armedia.id'],
-        [
-            'name' => 'Admin Armedia',
-            'password' => Hash::make('Masuk1234')
-        ]
-    );
-    
-    // Assign role super admin jika menggunakan spatie permission
-    if (class_exists(\Spatie\Permission\Models\Role::class)) {
-        $role = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
-        $user->assignRole($role);
-    }
-
-    return 'Akun admin berhasil dibuat! Silakan kembali ke <a href="/admin/login">Halaman Login Admin</a>';
-});
+// Route /setup-admin DIHAPUS — BERBAHAYA (publik, reset password admin).
+// Gunakan: php artisan app:create-admin --email=admin@armedia.id --password=XXXXX
 
 Route::get('/', function () {
     $testimonials = Testimonial::all();
@@ -155,6 +140,16 @@ Route::middleware('auth')->group(function () {
 
     // ── Cetak Slip Gaji ──────────────────────────────────────────────────────
     Route::get('/hrm/payroll/{payroll}/print', function (\App\Models\Payroll $payroll) {
+        // IDOR Fix: Pastikan hanya super_admin/keuangan yang bisa cetak semua slip,
+        // atau karyawan hanya bisa cetak milik dirinya sendiri.
+        $user = auth()->user();
+        if (!$user->hasAnyRole(['super_admin', 'admin', 'keuangan'])) {
+            // Cek apakah payroll ini milik employee yang terhubung ke user ini
+            if (!$payroll->employee || $payroll->employee->user_id !== $user->id) {
+                abort(403, 'Anda tidak berhak mencetak slip gaji ini.');
+            }
+        }
+
         $payroll->load('employee');
         $months = [
             1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',
