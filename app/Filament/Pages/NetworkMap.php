@@ -50,10 +50,10 @@ class NetworkMap extends Page
                 'lng' => (float) $lng,
                 'odp' => $customer->odp?->name ?? 'Belum ada ODP',
             ];
-        })->filter();
+        })->filter()->values();
 
         return [
-            'locations' => $odps->merge($customers)->toJson(),
+            'locations' => $odps->merge($customers)->values()->toJson(),
         ];
     }
 }
