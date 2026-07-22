@@ -58,7 +58,7 @@ class ExpenseResource extends Resource
                 Tables\Columns\TextColumn::make('expense_no')->label('No.')->copyable()->weight('bold'),
                 Tables\Columns\TextColumn::make('expense_date')->label('Tanggal')->date('d M Y')->sortable(),
                 Tables\Columns\TextColumn::make('category')->label('Kategori')->badge()
-                    ->formatStateUsing(fn($s) => match($s) {
+                    ->formatStateUsing(fn($state) => match($state) {
                         'operasional'=>'⚙️ Operasional','infrastruktur'=>'🏗️ Infrastruktur',
                         'sdm'=>'👥 SDM','pemasaran'=>'📢 Pemasaran',default=>'📦 Lainnya'
                     }),
