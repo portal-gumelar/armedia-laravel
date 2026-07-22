@@ -29,19 +29,33 @@ class MonthlyBillResource extends Resource
         return $form
             ->schema([
                 Forms\Components\Select::make('customer_id')
+                    ->label('Pelanggan')
                     ->relationship('customer', 'name')
+                    ->searchable()
+                    ->preload()
                     ->required(),
                 Forms\Components\TextInput::make('tahun')
-                    ->required()
-                    ->numeric(),
-                Forms\Components\TextInput::make('bulan')
-                    ->required()
-                    ->numeric(),
-                Forms\Components\TextInput::make('jumlah')
+                    ->label('Tahun')
                     ->required()
                     ->numeric()
+                    ->default(now()->year),
+                Forms\Components\Select::make('bulan')
+                    ->label('Bulan')
+                    ->options([
+                        1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+                        5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+                        9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember',
+                    ])
+                    ->required(),
+                Forms\Components\TextInput::make('jumlah')
+                    ->label('Jumlah (Rp)')
+                    ->required()
+                    ->numeric()
+                    ->prefix('Rp')
                     ->default(0),
                 Forms\Components\TextInput::make('harga_acuan_snapshot')
+                    ->label('Harga Acuan (Rp)')
+                    ->prefix('Rp')
                     ->numeric(),
             ]);
     }
@@ -51,20 +65,30 @@ class MonthlyBillResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('customer.name')
-                    ->numeric()
+                    ->label('Pelanggan')
+                    ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('tahun')
-                    ->numeric()
+                    ->label('Tahun')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('bulan')
-                    ->numeric()
+                    ->label('Bulan')
+                    ->formatStateUsing(fn ($state) => match ($state) {
+                        1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+                        5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+                        9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember',
+                        default => $state,
+                    })
                     ->sortable(),
                 Tables\Columns\TextColumn::make('jumlah')
-                    ->numeric()
+                    ->label('Jumlah Tagihan')
+                    ->money('IDR')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('harga_acuan_snapshot')
-                    ->numeric()
-                    ->sortable(),
+                    ->label('Harga Acuan')
+                    ->money('IDR')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

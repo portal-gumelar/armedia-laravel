@@ -28,26 +28,60 @@ class OntInventoryResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('tipe')
-                    ->required(),
-                Forms\Components\TextInput::make('nama_barang')
-                    ->required(),
-                Forms\Components\TextInput::make('merek'),
-                Forms\Components\TextInput::make('sn'),
-                Forms\Components\TextInput::make('mac_address'),
-                Forms\Components\TextInput::make('ip_address'),
-                Forms\Components\TextInput::make('ssid_2g'),
-                Forms\Components\TextInput::make('ssid_5g'),
-                Forms\Components\TextInput::make('jumlah')
-                    ->required()
-                    ->numeric()
-                    ->default(1),
-                Forms\Components\TextInput::make('keterangan'),
-                Forms\Components\TextInput::make('status'),
-                Forms\Components\DatePicker::make('tgl_keluar'),
-                Forms\Components\TextInput::make('teknisi'),
-                Forms\Components\Select::make('customer_id')
-                    ->relationship('customer', 'name'),
+                Forms\Components\Section::make('Informasi Barang')
+                    ->schema([
+                        Forms\Components\Select::make('tipe')
+                            ->options([
+                                'Baru' => 'Baru',
+                                'Bekas' => 'Bekas',
+                                'Rusak' => 'Rusak',
+                            ])
+                            ->required(),
+                        Forms\Components\TextInput::make('nama_barang')
+                            ->required(),
+                        Forms\Components\TextInput::make('merek'),
+                        Forms\Components\TextInput::make('sn')
+                            ->label('Serial Number (SN)'),
+                        Forms\Components\TextInput::make('jumlah')
+                            ->required()
+                            ->numeric()
+                            ->default(1),
+                        Forms\Components\Select::make('status')
+                            ->options([
+                                'Tersedia' => 'Tersedia',
+                                'Terpakai' => 'Terpakai',
+                                'Rusak' => 'Rusak',
+                                'Dipinjam' => 'Dipinjam',
+                            ])
+                            ->default('Tersedia'),
+                        Forms\Components\Textarea::make('keterangan')
+                            ->columnSpanFull(),
+                    ])->columns(2),
+
+                Forms\Components\Section::make('Konfigurasi Jaringan')
+                    ->schema([
+                        Forms\Components\TextInput::make('mac_address')
+                            ->label('MAC Address'),
+                        Forms\Components\TextInput::make('ip_address')
+                            ->label('IP Address'),
+                        Forms\Components\TextInput::make('ssid_2g')
+                            ->label('SSID 2.4GHz'),
+                        Forms\Components\TextInput::make('ssid_5g')
+                            ->label('SSID 5GHz'),
+                    ])->columns(2)->collapsed(),
+
+                Forms\Components\Section::make('Alokasi / Pengeluaran')
+                    ->schema([
+                        Forms\Components\DatePicker::make('tgl_keluar')
+                            ->label('Tanggal Keluar'),
+                        Forms\Components\TextInput::make('teknisi')
+                            ->label('Nama Teknisi'),
+                        Forms\Components\Select::make('customer_id')
+                            ->label('Pelanggan')
+                            ->relationship('customer', 'name')
+                            ->searchable()
+                            ->preload(),
+                    ])->columns(3)->collapsed(),
             ]);
     }
 
@@ -55,37 +89,56 @@ class OntInventoryResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('tipe')
-                    ->searchable(),
                 Tables\Columns\TextColumn::make('nama_barang')
-                    ->searchable(),
+                    ->label('Nama Barang')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('merek')
-                    ->searchable(),
+                    ->label('Merek')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('sn')
+                    ->label('SN')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('mac_address')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('ip_address')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('ssid_2g')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('ssid_5g')
-                    ->searchable(),
+                Tables\Columns\TextColumn::make('tipe')->badge()
+                    ->label('Tipe')
+                    ->color(fn (string $state): string => match ($state) {
+                        'Baru' => 'success',
+                        'Bekas' => 'warning',
+                        'Rusak' => 'danger',
+                        default => 'gray',
+                    }),
+                Tables\Columns\TextColumn::make('status')->badge()
+                    ->label('Status')
+                    ->color(fn (string $state): string => match ($state) {
+                        'Tersedia' => 'success',
+                        'Terpakai' => 'primary',
+                        'Dipinjam' => 'warning',
+                        'Rusak' => 'danger',
+                        default => 'gray',
+                    }),
                 Tables\Columns\TextColumn::make('jumlah')
                     ->numeric()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('keterangan')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('status')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('tgl_keluar')
-                    ->date()
-                    ->sortable(),
                 Tables\Columns\TextColumn::make('teknisi')
-                    ->searchable(),
+                    ->label('Teknisi')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('customer.name')
-                    ->numeric()
+                    ->label('Pelanggan')
+                    ->searchable()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('tgl_keluar')
+                    ->label('Tgl Keluar')
+                    ->date()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('mac_address')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('ip_address')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
