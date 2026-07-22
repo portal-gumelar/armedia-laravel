@@ -34,12 +34,13 @@ class Login extends BaseLogin
         ];
     }
 
-    protected static string $view = 'filament.member.pages.auth.login';
+    // Custom view dihapus agar kembali ke desain bawaan Filament
+    // protected static string $view = 'filament.member.pages.auth.login';
     
-    public function getLayout(): string
-    {
-        return 'filament-panels::components.layout.base';
-    }
+    // public function getLayout(): string
+    // {
+    //     return 'filament-panels::components.layout.base';
+    // }
 
     protected function throwFailureValidationException(): never
     {
