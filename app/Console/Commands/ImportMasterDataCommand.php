@@ -78,7 +78,7 @@ class ImportMasterDataCommand extends Command
             ['monthly_bills', MonthlyBill::count()],
             ['csr_distributions', CsrDistribution::count()],
             ['csr_distribution_months', CsrDistributionMonth::count()],
-            ['marketing_referrals', MarketingReferral::count()],
+            ['marketing_fees', \App\Models\MarketingFee::count()],
             ['prorata_rates', ProrataRate::count()],
             ['operational_expenses', OperationalExpense::count()],
         ]);
@@ -579,17 +579,17 @@ class ImportMasterDataCommand extends Command
             $client = $this->v($row, 4);
             if (! $client) continue;
 
-            MarketingReferral::create([
-                'nama_marketing' => $this->v($row, 2),
-                'lokasi' => $this->v($row, 3),
-                'nama_client' => $client,
-                'jumlah_fee' => $this->toAmount($this->v($row, 5)),
-                'tgl_daftar' => $this->toDate($this->v($row, 6)),
-                'sumber_data' => $this->v($row, 7),
+            \App\Models\MarketingFee::create([
+                'marketing_name' => $this->v($row, 2),
+                'location' => $this->v($row, 3),
+                'client_name' => $client,
+                'fee_amount' => $this->toAmount($this->v($row, 5)),
+                'created_at' => $this->toDate($this->v($row, 6)),
+                'status' => 'dibayar', // default anggap sudah dibayar dari rekap excel
             ]);
             $n++;
         }
-        $this->info("marketing_referrals: {$n} baris");
+        $this->info("marketing_fees: {$n} baris");
     }
 
     // ---------------------------------------------------------------
