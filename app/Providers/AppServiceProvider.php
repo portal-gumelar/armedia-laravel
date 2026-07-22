@@ -33,6 +33,11 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\Customer::observe(\App\Observers\CustomerObserver::class);
         Vite::prefetch(concurrency: 3);
 
+        // Beri akses penuh ke super_admin (Bypass semua permission policy)
+        \Illuminate\Support\Facades\Gate::before(function ($user, $ability) {
+            return $user->hasRole('super_admin') ? true : null;
+        });
+
         // Inject Premium Glassmorphism CSS for Filament UI
         FilamentView::registerRenderHook(
             PanelsRenderHook::HEAD_END,
