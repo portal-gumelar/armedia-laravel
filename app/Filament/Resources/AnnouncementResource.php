@@ -17,7 +17,9 @@ class AnnouncementResource extends Resource
 {
     protected static ?string $model = Announcement::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-megaphone';
+    protected static ?string $navigationGroup = 'Portal & Informasi';
+    protected static ?string $navigationLabel = 'Pengumuman';
 
     public static function form(Form $form): Form
     {
@@ -59,11 +61,18 @@ class AnnouncementResource extends Resource
                 Tables\Columns\TextColumn::make('type')
                     ->label('Tipe')
                     ->badge()
-                    ->colors([
+                    ->color(fn (string $state): string => match ($state) {
                         'info' => 'info',
                         'warning' => 'warning',
-                        'success' => 'promo',
-                    ]),
+                        'promo' => 'success',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'info' => 'Informasi',
+                        'warning' => 'Peringatan',
+                        'promo' => 'Promo',
+                        default => $state,
+                    }),
                 Tables\Columns\IconColumn::make('is_active')
                     ->label('Aktif')
                     ->boolean(),
