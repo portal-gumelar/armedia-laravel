@@ -28,7 +28,7 @@ class HrmPanelProvider extends PanelProvider
             ->path('hrm')
             ->login()
             ->brandName('ARMEDIA HRM')
-            ->brandLogo('https://ik.imagekit.io/Gumelar/LogO/logo%20pt.png?updatedAt=1778213993513')
+            ->brandLogo('/images/logo-armedia.png')
             ->brandLogoHeight('2.5rem')
             ->colors([
                 'primary' => Color::Indigo,
@@ -49,6 +49,7 @@ class HrmPanelProvider extends PanelProvider
                 for: 'App\\Filament\\Hrm\\Widgets'
             )
             ->widgets([
+                \App\Filament\Hrm\Widgets\HrmOverview::class,
                 Widgets\AccountWidget::class,
             ])
             ->navigationGroups([

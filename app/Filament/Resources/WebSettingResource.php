@@ -18,7 +18,7 @@ class WebSettingResource extends Resource
     protected static ?string $model = WebSetting::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
-    protected static ?string $navigationGroup = 'Pengaturan';
+    protected static ?string $navigationGroup = 'Pengaturan & Sistem';
     protected static ?string $navigationLabel = 'Pengaturan Web';
     protected static ?string $pluralModelLabel = 'Pengaturan Web';
     protected static ?string $modelLabel = 'Pengaturan Web';

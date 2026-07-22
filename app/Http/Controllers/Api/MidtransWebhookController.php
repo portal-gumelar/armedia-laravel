@@ -19,29 +19,47 @@ class MidtransWebhookController extends Controller
     public function handle(Request $request)
     {
         $payload = $request->all();
-        Log::info('Midtrans Webhook Received:', $payload);
-
+        
         $orderId           = $payload['order_id'] ?? null;
+        $statusCode        = $payload['status_code'] ?? null;
+        $grossAmount       = $payload['gross_amount'] ?? null;
         $transactionStatus = $payload['transaction_status'] ?? null;
         $fraudStatus       = $payload['fraud_status'] ?? null;
         $paymentType       = $payload['payment_type'] ?? null;
+        $signatureKey      = $payload['signature_key'] ?? null;
+        $invoiceId         = $payload['custom_field1'] ?? null;
 
-        // custom_field1 = invoice id yang kita sisipkan saat generate Snap Token
-        $invoiceId = $payload['custom_field1'] ?? null;
-
-        if (!$orderId || !$transactionStatus) {
+        // 1. Validasi Keberadaan Data Minimal
+        if (!$orderId || !$statusCode || !$grossAmount || !$signatureKey) {
             return response()->json(['message' => 'Invalid Payload'], 400);
         }
 
-        // Cari Invoice
+        // 2. Validasi Signature Key (SHA512)
+        $serverKey = config('midtrans.server_key');
+        $expectedSignature = hash('sha512', $orderId . $statusCode . $grossAmount . $serverKey);
+        
+        if ($expectedSignature !== $signatureKey) {
+            Log::warning("Midtrans Webhook: Invalid Signature for Order ID {$orderId}");
+            return response()->json(['message' => 'Invalid Signature'], 403);
+        }
+
+        // 3. Simpan Raw Payload ke Log (Tabel baru)
+        \App\Models\MidtransWebhookLog::create([
+            'order_id' => $orderId,
+            'transaction_status' => $transactionStatus,
+            'fraud_status' => $fraudStatus,
+            'payload' => $payload,
+        ]);
+        
+        Log::info('Midtrans Webhook Valid Signature Received:', ['order_id' => $orderId]);
+
+        // 4. Cari Invoice
         $invoice = null;
         if ($invoiceId) {
             $invoice = Invoice::find($invoiceId);
         }
 
         if (!$invoice) {
-            // Fallback: cari via invoice_no (format: ARM-0001-260711.070000.ID)
-            // order_id midtrans kita set dari invoice_no di MidtransPaymentService
             $invoice = Invoice::where('invoice_no', 'like', '%' . explode('-', $orderId)[0] . '%')->first();
         }
 
@@ -50,36 +68,41 @@ class MidtransWebhookController extends Controller
             return response()->json(['message' => 'Invoice Not Found'], 404);
         }
 
-        // Mapping status Midtrans → InvoiceStatus Enum kita
-        if ($transactionStatus === 'capture') {
-            if ($fraudStatus === 'challenge') {
-                // Ditandai perlu review manual — tetap belum
+        // 5. Idempotency Check (Apakah sudah lunas?)
+        if ($invoice->status === InvoiceStatus::LUNAS->value) {
+            Log::info("Midtrans Webhook: Invoice {$invoice->invoice_no} is already LUNAS. Skipping.");
+            return response()->json(['message' => 'Already Processed']);
+        }
+
+        // 6. Validasi Nominal Pembayaran (Gross Amount vs Invoice Total)
+        // Midtrans mengirimkan gross_amount dengan format desimal e.g. "150000.00"
+        if ((float) $grossAmount !== (float) $invoice->total_amount) {
+            Log::warning("Midtrans Webhook: Amount mismatch for {$invoice->invoice_no}. Expected {$invoice->total_amount}, got {$grossAmount}.");
+            // Bisa return error atau simpan log fraud
+            return response()->json(['message' => 'Amount Mismatch'], 400);
+        }
+
+        // 7. Proses Status Pembayaran
+        if ($transactionStatus == 'capture' || $transactionStatus == 'settlement') {
+            if ($fraudStatus == 'challenge') {
+                // Jangan lunas, masih butuh review manual Midtrans
                 Log::warning("Midtrans: payment challenged for invoice {$invoice->invoice_no}");
-            } elseif ($fraudStatus === 'accept') {
+            } else if ($fraudStatus == 'accept' || $transactionStatus == 'settlement') {
                 $invoice->update([
                     'status'         => InvoiceStatus::LUNAS->value,
                     'paid_at'        => now(),
                     'payment_method' => $paymentType ?? 'midtrans',
                 ]);
             }
-        } elseif ($transactionStatus === 'settlement') {
-            $invoice->update([
-                'status'         => InvoiceStatus::LUNAS->value,
-                'paid_at'        => now(),
-                'payment_method' => $paymentType ?? 'midtrans',
-            ]);
         } elseif (in_array($transactionStatus, ['cancel', 'deny', 'expire'])) {
-            // Bersihkan token lama agar bisa generate ulang
             $invoice->update([
                 'payment_token' => null,
                 'payment_url'   => null,
             ]);
-        } elseif ($transactionStatus === 'pending') {
-            // Tidak ubah status, biarkan tetap 'belum' sambil menunggu konfirmasi
+        } elseif ($transactionStatus == 'pending') {
             Log::info("Midtrans: payment pending for invoice {$invoice->invoice_no}");
         }
 
-        Log::info("Midtrans Webhook: Invoice {$invoice->invoice_no} → transaction_status: {$transactionStatus}");
         return response()->json(['message' => 'OK']);
     }
 }

@@ -48,7 +48,7 @@ class CustomerImport implements ToCollection, WithHeadingRow
 
             $desaName  = $this->normalizeDesa($row['desa'] ?? '');
             $villageId = $this->villageCache[strtoupper($desaName)] ?? null;
-            $packageId = $this->packageCache[trim($row['produk_id'] ?? $row['kode_paket'] ?? '')] ?? null;
+            $packageId = $this->packageCache[trim($row['produk_id'] ?? $row['kode_paket'] ?? $row['paket_mbps'] ?? '')] ?? null;
             $odpId     = $this->odpCache[trim($row['odp'] ?? '')] ?? null;
             $deviceId  = $this->deviceCache[trim($row['perangkat_id'] ?? $row['device_code'] ?? '')] ?? null;
 
@@ -64,7 +64,12 @@ class CustomerImport implements ToCollection, WithHeadingRow
                     'rw'                 => trim($row['rw'] ?? ''),
                     'rt'                 => trim($row['rt'] ?? ''),
                     'village_id'         => $villageId,
+                    'desa'               => trim($row['desa'] ?? ''),
+                    'kec'                => trim($row['kec'] ?? 'Gumelar'),
+                    'kota_kab'           => trim($row['kota_kab'] ?? 'Banyumas'),
                     'internet_package_id' => $packageId,
+                    'paket_mbps'         => trim($row['paket_mbps'] ?? ''),
+                    'harga'              => trim($row['harga'] ?? ''),
                     'odp_id'             => $odpId,
                     'device_id'          => $deviceId,
                     'ip_address'         => trim($row['ip_address'] ?? $row['ip'] ?? ''),

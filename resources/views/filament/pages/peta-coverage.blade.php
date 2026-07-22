@@ -29,7 +29,7 @@
 
     {{-- Map Container --}}
     <div
-        x-data="petaCoverage(@js($this->getOdps()), @js($this->getCustomers()))"
+        x-data="petaCoverage(@js($this->getOdps()), @js($this->getCustomers()), @js($this->getRoutes()))"
         x-init="init()"
         class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
     >
@@ -135,10 +135,11 @@
     @endif
 
     <script>
-    function petaCoverage(odps, customers) {
+    function petaCoverage(odps, customers, cableRoutes) {
         return {
             odps: odps,
             customers: customers,
+            cableRoutes: cableRoutes,
             map: null,
             markers: [],
             selectedOdp: null,
@@ -181,6 +182,7 @@
                         iconAnchor: [12, 41],
                         popupAnchor: [1, -34],
                         shadowSize: [41, 41],
+                        className: odp.sisa <= 0 ? 'marker-pulse-red' : ''
                     });
 
                     const marker = L.marker([odp.latitude, odp.longitude], { icon })
@@ -195,6 +197,28 @@
                     });
 
                     this.markers.push(marker);
+                });
+
+                // Plot Jalur Kabel (Polyline)
+                this.cableRoutes.forEach(route => {
+                    if (route.polyline && route.polyline.length > 0) {
+                        let routeColor = '#3b82f6'; // default blue (distribution)
+                        if (route.type === 'core') routeColor = '#ef4444'; // red
+                        if (route.type === 'drop') routeColor = '#22c55e'; // green
+                        
+                        if (route.status === 'cut') routeColor = '#000000'; // black
+                        
+                        let dashArray = route.status === 'maintenance' ? '5, 10' : null;
+
+                        L.polyline(route.polyline, {
+                            color: routeColor,
+                            weight: route.type === 'core' ? 5 : 3,
+                            opacity: 0.8,
+                            dashArray: dashArray
+                        })
+                        .addTo(this.map)
+                        .bindTooltip(`<b>Jalur Kabel:</b> ${route.name}<br><b>Tipe:</b> ${route.type}<br><b>Status:</b> ${route.status}`);
+                    }
                 });
 
                 // Fit bounds ke semua ODP

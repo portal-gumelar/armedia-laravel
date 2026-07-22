@@ -15,12 +15,12 @@ class MarketingFeeResource extends Resource
     protected static ?string $model = MarketingFee::class;
 
     protected static ?string $navigationIcon  = 'heroicon-o-currency-dollar';
-    protected static ?string $navigationGroup = 'Operasional ISP';
+    protected static ?string $navigationGroup = 'Pengaturan & Sistem';
     protected static ?string $navigationLabel = 'Fee Marketing';
     protected static ?string $pluralModelLabel = 'Fee Marketing';
     protected static ?string $modelLabel       = 'Fee Marketing';
     protected static ?string $recordTitleAttribute = 'marketing_name';
-    protected static ?int    $navigationSort   = 5;
+    protected static ?int    $navigationSort   = 9;
 
     public static function form(Form $form): Form
     {

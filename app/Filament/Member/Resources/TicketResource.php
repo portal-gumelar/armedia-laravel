@@ -10,44 +10,35 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use App\Enums\TicketCategory;
+use App\Enums\TicketStatus;
+use App\Enums\TicketPriority;
+use Illuminate\Support\Facades\Auth;
 
 class TicketResource extends Resource
 {
     protected static ?string $model = Ticket::class;
-
-    protected static ?string $navigationIcon = 'heroicon-o-chat-bubble-left-ellipsis';
+    
+    protected static ?string $navigationIcon = 'heroicon-o-wrench-screwdriver';
     protected static ?string $navigationLabel = 'Layanan / Tiket';
+    protected static ?string $modelLabel = 'Tiket Gangguan';
     protected static ?string $pluralModelLabel = 'Layanan / Tiket';
-    protected static ?string $modelLabel = 'Tiket';
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
                 Forms\Components\Select::make('category')
-                    ->label('Kategori')
-                    ->options([
-                        'technical' => 'Gangguan Teknis',
-                        'billing' => 'Info Tagihan',
-                        'upgrade' => 'Upgrade Layanan',
-                        'other' => 'Lain-lain',
-                    ])
-                    ->required(),
-                Forms\Components\TextInput::make('subject')
-                    ->label('Subjek')
+                    ->label('Kategori Kendala')
+                    ->options(TicketCategory::class)
                     ->required()
-                    ->maxLength(255),
-                Forms\Components\Textarea::make('description')
-                    ->label('Deskripsi Keluhan')
-                    ->required()
-                    ->rows(5)
                     ->columnSpanFull(),
-                Forms\Components\Hidden::make('status')
-                    ->default('open'),
-                Forms\Components\Hidden::make('customer_id')
-                    ->default(fn () => auth('customer')->id()),
-                Forms\Components\Hidden::make('mitra_id')
-                    ->default(fn () => auth('customer')->user()->mitra_id),
+                Forms\Components\Textarea::make('description')
+                    ->label('Jelaskan Kendala Anda')
+                    ->placeholder('Contoh: Internet mati sejak tadi pagi, lampu LOS di router berkedip merah.')
+                    ->required()
+                    ->rows(4)
+                    ->columnSpanFull(),
             ]);
     }
 
@@ -56,43 +47,65 @@ class TicketResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('ticket_no')
-                    ->label('Nomor Tiket')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('subject')
-                    ->label('Subjek')
-                    ->searchable(),
-                Tables\Columns\BadgeColumn::make('status')
-                    ->label('Status')
-                    ->colors([
-                        'warning' => 'open',
-                        'primary' => 'in_progress',
-                        'success' => 'resolved',
-                        'danger' => 'closed',
-                    ]),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->label('Dibuat')
-                    ->dateTime('d M Y H:i'),
-                Tables\Columns\TextColumn::make('technician_notes')
-                    ->label('Catatan Teknisi')
-                    ->limit(30)
-                    ->tooltip(function (\Filament\Tables\Columns\TextColumn $column): ?string {
+                    ->label('No. Tiket')
+                    ->searchable()
+                    ->copyable()
+                    ->weight('bold'),
+                Tables\Columns\TextColumn::make('priority')
+                    ->label('Prioritas')
+                    ->badge()
+                    ->sortable(query: fn (Builder $query, string $direction) => $query->orderByRaw("CASE priority WHEN 'urgent' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 END $direction")),
+                Tables\Columns\TextColumn::make('category')
+                    ->label('Kategori')
+                    ->badge(),
+                Tables\Columns\TextColumn::make('description')
+                    ->label('Deskripsi')
+                    ->limit(50)
+                    ->tooltip(function (Tables\Columns\TextColumn $column): ?string {
                         $state = $column->getState();
-                        if (strlen($state) <= $column->getCharacterLimit()) return null;
+                        if (strlen($state) <= $column->getCharacterLimit()) {
+                            return null;
+                        }
                         return $state;
                     }),
+                Tables\Columns\TextColumn::make('status')
+                    ->label('Status')
+                    ->badge(),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Dilaporkan Pada')
+                    ->dateTime('d M Y, H:i')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('resolution_notes')
+                    ->label('Tanggapan Teknisi')
+                    ->placeholder('Belum ada tanggapan')
+                    ->limit(50),
             ])
             ->filters([
                 //
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
-            ]);
+            ])
+            ->bulkActions([
+                //
+            ])
+            ->emptyStateHeading('Belum ada tiket gangguan')
+            ->emptyStateDescription('Jika internet Anda bermasalah, klik tombol Buat Tiket untuk melaporkan.');
     }
 
-    // Hanya tampilkan tiket milik pelanggan yang sedang login
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->where('customer_id', auth('customer')->id());
+        return parent::getEloquentQuery()
+            ->where('customer_id', Auth::guard('customer')->id())
+            ->orderByRaw("CASE priority WHEN 'urgent' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 ELSE 5 END")
+            ->orderBy('created_at', 'asc');
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            //
+        ];
     }
 
     public static function getPages(): array
@@ -100,6 +113,7 @@ class TicketResource extends Resource
         return [
             'index' => Pages\ListTickets::route('/'),
             'create' => Pages\CreateTicket::route('/create'),
+            // 'edit' => Pages\EditTicket::route('/{record}/edit'), // Member should not edit tickets
         ];
     }
 }

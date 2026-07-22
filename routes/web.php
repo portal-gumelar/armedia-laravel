@@ -259,28 +259,19 @@ Route::prefix('/api/isp/typebot')
     Route::get('/customer', [\App\Http\Controllers\Api\TypebotBridgeController::class, 'getCustomerByPhone']);
     Route::get('/customer/{id}/invoices', [\App\Http\Controllers\Api\TypebotBridgeController::class, 'getUnpaidInvoices']);
     Route::post('/invoices/{id}/pay', [\App\Http\Controllers\Api\TypebotBridgeController::class, 'generatePaymentLink']);
+    
+    // New Advanced Features
+    Route::post('/tickets', [\App\Http\Controllers\Api\TypebotBridgeController::class, 'createTicket']);
+    Route::post('/customer/{id}/reboot-modem', [\App\Http\Controllers\Api\TypebotBridgeController::class, 'rebootModem']);
+    Route::get('/customer/{id}/status', [\App\Http\Controllers\Api\TypebotBridgeController::class, 'checkConnectivity']);
 });
 
 // ═══════════════════════════════════════════════════════════════
 // PORTAL PELANGGAN — Login & Dashboard self-service pelanggan ISP
 // ═══════════════════════════════════════════════════════════════
 
-Route::prefix('pelanggan')->name('portal.')->group(function () {
-    Route::get('/login',  [\App\Http\Controllers\CustomerPortalController::class, 'showLogin'])->name('login');
-    Route::post('/login', [\App\Http\Controllers\CustomerPortalController::class, 'login'])->name('login.post');
-    Route::post('/logout',[\App\Http\Controllers\CustomerPortalController::class, 'logout'])->name('logout');
-
-    Route::middleware('auth:member')->group(function () {
-        Route::get('/',              [\App\Http\Controllers\CustomerPortalController::class, 'dashboard'])->name('dashboard');
-        Route::get('/invoice/{id}',  [\App\Http\Controllers\CustomerPortalController::class, 'invoiceDetail'])->name('invoice');
-        // Pembayaran: generate Midtrans Snap Token via AJAX
-        Route::post('/invoice/{id}/pay', [\App\Http\Controllers\CustomerPortalController::class, 'generatePayment'])->name('invoice.pay');
-        // Tiket Gangguan
-        Route::get('/gangguan',      [\App\Http\Controllers\CustomerPortalController::class, 'ticketIndex'])->name('tickets');
-        Route::get('/gangguan/buat', [\App\Http\Controllers\CustomerPortalController::class, 'ticketCreate'])->name('ticket.create');
-        Route::post('/gangguan/buat',[\App\Http\Controllers\CustomerPortalController::class, 'ticketStore'])->name('ticket.store');
-        Route::get('/gangguan/{id}', [\App\Http\Controllers\CustomerPortalController::class, 'ticketDetail'])->name('ticket.show');
-    });
-});
+Route::get('pelanggan/{any?}', function () {
+    return redirect('/member');
+})->where('any', '.*');
 
 require __DIR__.'/auth.php';

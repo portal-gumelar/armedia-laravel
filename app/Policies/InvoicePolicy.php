@@ -2,7 +2,9 @@
 
 namespace App\Policies;
 
-use App\Models\User;
+use Illuminate\Foundation\Auth\User;
+use App\Models\Customer;
+use App\Models\Mitra;
 use App\Models\Invoice;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
@@ -15,6 +17,8 @@ class InvoicePolicy
      */
     public function viewAny(User $user): bool
     {
+        if ($user instanceof Customer) return true;
+        if ($user instanceof Mitra) return true;
         return $user->can('view_any_invoice');
     }
 
@@ -23,6 +27,12 @@ class InvoicePolicy
      */
     public function view(User $user, Invoice $invoice): bool
     {
+        if ($user instanceof Customer) {
+            return $invoice->customer_id === $user->id;
+        }
+        if ($user instanceof Mitra) {
+            return $invoice->mitra_id === $user->id || ($invoice->customer && $invoice->customer->mitra_id === $user->id);
+        }
         return $user->can('view_invoice');
     }
 

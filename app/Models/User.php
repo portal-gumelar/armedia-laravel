@@ -42,8 +42,9 @@ class User extends Authenticatable implements HasAvatar, FilamentUser, HasTenant
 
     public function canAccessPanel(Panel $panel): bool
     {
-        // Izinkan semua user terdaftar untuk masuk ke panel (dibatasi oleh Role Spatie)
-        return true;
+        // Hanya izinkan role tertentu untuk masuk ke panel admin
+        // Atau asumsikan 'super_admin' pasti bisa masuk
+        return $this->hasRole(['super_admin', 'admin', 'teknisi', 'cs', 'keuangan']);
     }
 
     // ── Multi-Tenancy Mitra ────────────────────────────────────────────────

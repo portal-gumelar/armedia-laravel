@@ -7,6 +7,8 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 use App\Models\Invoice;
 use App\Models\Ticket;
 use App\Models\AcrMember;
+use App\Enums\InvoiceStatus;
+use App\Enums\TicketStatus;
 
 class BillingSummaryWidget extends BaseWidget
 {
@@ -16,7 +18,7 @@ class BillingSummaryWidget extends BaseWidget
         
         // 1. Tagihan Belum Dibayar
         $unpaidInvoice = Invoice::where('customer_id', $customer->id)
-            ->where('status', 'unpaid')
+            ->where('status', InvoiceStatus::BELUM->value)
             ->orderBy('due_date', 'asc')
             ->first();
             
@@ -27,7 +29,7 @@ class BillingSummaryWidget extends BaseWidget
 
         // 2. Tiket Aktif
         $activeTicketsCount = Ticket::where('customer_id', $customer->id)
-            ->whereIn('status', ['open', 'in_progress'])
+            ->whereIn('status', [TicketStatus::OPEN->value, TicketStatus::PROCESS->value])
             ->count();
             
         // 3. Poin ACR
@@ -38,17 +40,28 @@ class BillingSummaryWidget extends BaseWidget
             Stat::make($tagihanLabel, $tagihanValue)
                 ->description($tagihanDesc)
                 ->descriptionIcon($unpaidInvoice ? 'heroicon-m-exclamation-circle' : 'heroicon-m-check-badge')
-                ->color($tagihanColor),
+                ->color($tagihanColor)
+                ->url('/member/invoices')
+                ->extraAttributes([
+                    'class' => 'hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border-t-4 border-t-emerald-500 cursor-pointer',
+                ]),
                 
             Stat::make('Poin Reward ACR', $poinValue)
-                ->description('Kumpulkan & Tukar Hadiah')
+                ->description($acrMember ? 'Kumpulkan & Tukar Hadiah' : 'Daftar di dashboard utama')
                 ->descriptionIcon('heroicon-m-gift')
-                ->color('warning'),
+                ->color('warning')
+                ->extraAttributes([
+                    'class' => 'hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border-t-4 border-t-amber-500',
+                ]),
                 
             Stat::make('Tiket Pengaduan Aktif', $activeTicketsCount)
                 ->description('Dalam proses perbaikan')
                 ->descriptionIcon('heroicon-m-wrench-screwdriver')
-                ->color('info'),
+                ->color('info')
+                ->url('/member/tickets')
+                ->extraAttributes([
+                    'class' => 'hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border-t-4 border-t-blue-500 cursor-pointer',
+                ]),
         ];
     }
 }

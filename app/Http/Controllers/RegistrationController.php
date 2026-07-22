@@ -70,6 +70,7 @@ class RegistrationController extends Controller
             'foto_ktp' => $request->foto_ktp ?? '',
             'catatan' => $request->notes ?? $request->catatan ?? '',
             'tanggal_pemasangan' => $request->tanggal_rencana_pasang ?? $request->tanggal_pemasangan ?? '',
+            'referral_id_arm' => $request->ref ?? null,
         ];
 
         $reg = Registration::create($dbRecord);

@@ -21,11 +21,11 @@ class InvoiceResource extends Resource
     protected static ?string $model = Invoice::class;
 
     protected static ?string $navigationIcon  = 'heroicon-o-banknotes';
-    protected static ?string $navigationGroup = 'Operasional ISP';
+    protected static ?string $navigationGroup = 'Layanan & Pelanggan';
     protected static ?string $navigationLabel = 'Tagihan';
     protected static ?string $pluralModelLabel = 'Tagihan';
     protected static ?string $modelLabel       = 'Tagihan';
-    protected static ?int    $navigationSort   = 3;
+    protected static ?int    $navigationSort   = 5;
 
     public static function form(Form $form): Form
     {
@@ -154,6 +154,55 @@ class InvoiceResource extends Resource
                         'status'  => InvoiceStatus::LUNAS->value,
                         'paid_at' => now()->toDateString(),
                     ])),
+                Tables\Actions\Action::make('kirimWa')
+                    ->label('Kirim WA')
+                    ->icon('heroicon-o-chat-bubble-oval-left-ellipsis')
+                    ->color('success')
+                    ->url(function ($record) {
+                        $customer = $record->customer;
+                        $phone = $customer?->whatsapp ?? '';
+                        
+                        // Format nomor WA (pastikan pakai 62)
+                        if (str_starts_with($phone, '0')) {
+                            $phone = '62' . substr($phone, 1);
+                        } elseif (!str_starts_with($phone, '62') && !empty($phone)) {
+                            $phone = '62' . $phone;
+                        }
+
+                        $name = $customer?->name ?? 'Pelanggan';
+                        $idPelanggan = $customer?->id_arm ?? '-';
+                        $invNo = $record->invoice_no ?? '-';
+                        $layanan = $customer?->internetPackage?->nama_paket ?? ($customer?->paket_mbps ? $customer->paket_mbps . ' Mbps' : 'Internet Home');
+                        $harga = number_format($record->amount, 0, ',', '.');
+                        $periode = $record->period ? $record->period->format('M Y') : '-';
+                        $jatuhTempo = $record->due_date ? $record->due_date->format('d-M-Y') : '-';
+                        
+                        $appUrl = config('app.url');
+                        $loginLink = $appUrl . '/member/login';
+                        $invoiceLink = $appUrl . '/member/invoices'; // atau link payment langsung jika ada
+                        
+                        $text = "Yth. Bapak/Ibu *{$name}* 👋✨\n\n"
+                            . "Invoice Tagihan internet kamu sudah siap nih! Yuk cek detail lengkapnya:\n\n"
+                            . "🆔 *ID Pelanggan*: {$idPelanggan}\n"
+                            . "📄 *Nomor Invoice*: {$invNo}\n"
+                            . "📶 *Layanan*: {$layanan}\n"
+                            . "💳 *Harga Paket*: Rp. {$harga}\n"
+                            . "🗓 *Periode*: {$periode}\n"
+                            . "⏰ *Jatuh Tempo*: {$jatuhTempo}\n\n"
+                            . "💵 *Total Tagihan*: Rp. {$harga}\n\n"
+                            . "🔗 Bayar lebih cepat dan mudah:\n"
+                            . "👉 {$invoiceLink}\n\n"
+                            . "Atau login ke Aplikasi pelanggan:\n"
+                            . "🌐 {$loginLink}\n\n"
+                            . "- Pembayaran Tunai bisa Ke Office ARMEDIA\n"
+                            . "- Keterlambatan pembayaran internet akan diputus sementara dan tagihan tetap berjalan, sesuai tgl pemasangan.\n\n"
+                            . "Terima kasih - by Billing\n"
+                            . "*CS/Admin ARMEDIA*\n"
+                            . "WA : 081234567890 (Hanya CHAT) 📵";
+                            
+                        return "https://wa.me/{$phone}?text=" . urlencode($text);
+                    })
+                    ->openUrlInNewTab(),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\RestoreAction::make(),
                 Tables\Actions\ForceDeleteAction::make(),

@@ -138,4 +138,141 @@ class MikrotikService
             return false;
         }
     }
+
+    /**
+     * Add a host to Netwatch for monitoring
+     * 
+     * @param MikrotikServer $server
+     * @param string $ip
+     * @param string $comment Format: NAMA - SN - HP - SSID - RT/RW - DESA
+     * @return bool
+     */
+    public function addNetwatchHost(MikrotikServer $server, string $ip, string $comment): bool
+    {
+        $client = $this->connect($server);
+        if (!$client) {
+            return false;
+        }
+
+        try {
+            // Cek apakah host sudah ada
+            $query = (new Query('/tool/netwatch/print'))->where('host', $ip);
+            $existing = $client->query($query)->read();
+
+            if (!empty($existing)) {
+                // Update jika sudah ada
+                $client->query(
+                    (new Query('/tool/netwatch/set'))
+                        ->equal('.id', $existing[0]['.id'])
+                        ->equal('comment', $comment)
+                )->read();
+            } else {
+                // Tambah baru jika belum ada
+                $client->query(
+                    (new Query('/tool/netwatch/add'))
+                        ->equal('host', $ip)
+                        ->equal('interval', '3m')
+                        ->equal('comment', $comment)
+                )->read();
+            }
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error("Failed to add Netwatch host {$ip}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Update the PPPoE profile for a customer (Bandwidth Sync).
+     */
+    public function updateSecretProfile(Customer $customer, string $newProfile): bool
+    {
+        if (!$customer->mikrotikServer || !$customer->pppoe_username) {
+            return false;
+        }
+
+        $client = $this->connect($customer->mikrotikServer);
+        if (!$client) {
+            return false;
+        }
+
+        try {
+            $query = (new Query('/ppp/secret/print'))->where('name', $customer->pppoe_username);
+            $secrets = $client->query($query)->read();
+            
+            if (!empty($secrets)) {
+                $client->query(
+                    (new Query('/ppp/secret/set'))
+                        ->equal('.id', $secrets[0]['.id'])
+                        ->equal('profile', $newProfile)
+                )->read();
+
+                // Reconnect active session so new profile applies
+                $activeQuery = (new Query('/ppp/active/print'))->where('name', $customer->pppoe_username);
+                $actives = $client->query($activeQuery)->read();
+                if (!empty($actives)) {
+                    $client->query(
+                        (new Query('/ppp/active/remove'))
+                            ->equal('.id', $actives[0]['.id'])
+                    )->read();
+                }
+
+                return true;
+            }
+            return false;
+        } catch (\Exception $e) {
+            Log::error("Failed to update PPPoE profile for Customer {$customer->id_arm}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Deploy Security Rules to Mikrotik (Anti Brute Force & Drops).
+     */
+    public function deploySecurityRules(MikrotikServer $server): bool
+    {
+        $client = $this->connect($server);
+        if (!$client) {
+            return false;
+        }
+
+        try {
+            // Drop invalid packets
+            $client->query(
+                (new Query('/ip/firewall/filter/add'))
+                    ->equal('chain', 'input')
+                    ->equal('connection-state', 'invalid')
+                    ->equal('action', 'drop')
+                    ->equal('comment', 'ARM-SEC: Drop Invalid Packets')
+            )->read();
+
+            // FTP Brute force mitigation
+            $client->query(
+                (new Query('/ip/firewall/filter/add'))
+                    ->equal('chain', 'input')
+                    ->equal('protocol', 'tcp')
+                    ->equal('dst-port', '21')
+                    ->equal('src-address-list', 'ftp_blacklist')
+                    ->equal('action', 'drop')
+                    ->equal('comment', 'ARM-SEC: Drop FTP Brute Force')
+            )->read();
+
+            // SSH Brute force mitigation
+            $client->query(
+                (new Query('/ip/firewall/filter/add'))
+                    ->equal('chain', 'input')
+                    ->equal('protocol', 'tcp')
+                    ->equal('dst-port', '22')
+                    ->equal('src-address-list', 'ssh_blacklist')
+                    ->equal('action', 'drop')
+                    ->equal('comment', 'ARM-SEC: Drop SSH Brute Force')
+            )->read();
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error("Failed to deploy security rules to Server {$server->name}: " . $e->getMessage());
+            return false;
+        }
+    }
 }

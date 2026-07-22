@@ -2,7 +2,7 @@
 
 namespace App\Policies;
 
-use App\Models\User;
+use Illuminate\Foundation\Auth\User;
 use App\Models\ContactMessage;
 use Illuminate\Auth\Access\HandlesAuthorization;
 

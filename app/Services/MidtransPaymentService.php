@@ -39,6 +39,10 @@ class MidtransPaymentService
         // Gunakan invoice_no sebagai order_id (lebih readable di dashboard Midtrans)
         // Tambahkan timestamp agar unik jika di-retry
         $orderId = ($invoice->invoice_no ?? 'INV-' . $invoice->id) . '-' . time();
+        // Pastikan order_id tidak lebih dari 50 karakter (batasan Midtrans)
+        if (strlen($orderId) > 50) {
+            $orderId = substr($orderId, 0, 50);
+        }
 
         $params = [
             'transaction_details' => [

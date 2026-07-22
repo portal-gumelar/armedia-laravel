@@ -25,12 +25,12 @@ class CustomerResource extends Resource
     protected static ?string $model = Customer::class;
 
     protected static ?string $navigationIcon  = 'heroicon-o-users';
-    protected static ?string $navigationGroup = 'Operasional ISP';
+    protected static ?string $navigationGroup = 'Layanan & Pelanggan';
     protected static ?string $navigationLabel = 'Pelanggan';
     protected static ?string $pluralModelLabel = 'Pelanggan';
     protected static ?string $modelLabel       = 'Pelanggan';
     protected static ?string $recordTitleAttribute = 'name';
-    protected static ?int    $navigationSort   = 2;
+    protected static ?int    $navigationSort   = 3;
 
     public static function form(Form $form): Form
     {
@@ -191,6 +191,15 @@ class CustomerResource extends Resource
                         ->label('Status Langganan')
                         ->options(CustomerSubscriptionStatus::class)
                         ->default(CustomerSubscriptionStatus::AKTIF->value),
+                    Forms\Components\Select::make('financial_status')
+                        ->label('Status Keuangan / Tagihan')
+                        ->options([
+                            'active' => 'Aktif (Lunas)',
+                            'arrears' => 'Nunggak (Jatuh Tempo)',
+                            'suspended' => 'Isolir',
+                        ])
+                        ->default('active')
+                        ->required(),
                 ]),
         ]);
     }
@@ -251,6 +260,240 @@ class CustomerResource extends Resource
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
+                Tables\Actions\Action::make('auto_provisioning')
+                    ->label('Auto Provisioning')
+                    ->icon('heroicon-o-cpu-chip')
+                    ->color('success')
+                    ->form([
+                        \Filament\Forms\Components\Select::make('olt_server_id')
+                            ->label('Pilih OLT Server')
+                            ->options(\App\Models\OltServer::pluck('name', 'id'))
+                            ->required(),
+                        \Filament\Forms\Components\Select::make('port')
+                            ->label('Port GPON OLT')
+                            ->options(array_combine(range(1, 16), range(1, 16)))
+                            ->required(),
+                        \Filament\Forms\Components\TextInput::make('sn')
+                            ->label('Serial Number (SN) Modem')
+                            ->placeholder('ZXIC074F3BEF')
+                            ->length(12)
+                            ->required(),
+                        \Filament\Forms\Components\Select::make('profile')
+                            ->label('TCONT Profile / Paket')
+                            ->options([
+                                '10M_UP' => '10M_UP',
+                                '20M_UP' => '20M_UP',
+                                '30M_UP' => '30M_UP',
+                                '50M_UP' => '50M_UP',
+                                '100M_UP' => '100M_UP',
+                            ])
+                            ->required(),
+                        \Filament\Forms\Components\TextInput::make('vlan')
+                            ->label('VLAN')
+                            ->default('1521')
+                            ->required(),
+                        \Filament\Forms\Components\TextInput::make('ip_address')
+                            ->label('IP Address Netwatch')
+                            ->default(fn ($record) => $record->ip_address)
+                            ->required(),
+                        \Filament\Forms\Components\TextInput::make('ssid')
+                            ->label('SSID WiFi')
+                            ->default(fn ($record) => 'Pelanggan ' . $record->name),
+                    ])
+                    ->action(function ($record, array $data, \Filament\Notifications\Notification $notification) {
+                        try {
+                            $olt = \App\Models\OltServer::find($data['olt_server_id']);
+                            $oltService = new \App\Services\ZteOltService($olt);
+                            
+                            // 1. Cari index kosong di OLT
+                            $index = $oltService->findEmptyIndex((int) $data['port']);
+                            
+                            // 2. Eksekusi registrasi OLT
+                            $phone = $record->whatsapp ?? '0000';
+                            $result = $oltService->registerOnu(
+                                $data['port'], 
+                                $index, 
+                                $data['sn'], 
+                                $data['profile'], 
+                                $record->name, 
+                                $data['ssid'], 
+                                $data['ip_address'], 
+                                $phone, 
+                                $data['vlan']
+                            );
+                            
+                            if (!$result['success']) {
+                                throw new \Exception($result['message']);
+                            }
+                            
+                            // 3. Simpan data PON OLT & IP ke database
+                            $record->update([
+                                'pon_olt' => "1/1/{$data['port']}:{$index}",
+                                'ip_address' => $data['ip_address']
+                            ]);
+                            
+                            // 4. Register ke Netwatch Mikrotik
+                            if ($record->mikrotikServer) {
+                                $mtService = new \App\Services\MikrotikService();
+                                $comment = "{$record->name} - {$data['sn']} - {$phone} - {$data['ssid']} - {$record->rt}/{$record->rw} - {$record->village?->name}";
+                                $mtService->addNetwatchHost($record->mikrotikServer, $data['ip_address'], $comment);
+                            }
+                            
+                            $notification->title('Auto Provisioning Berhasil!')
+                                ->body("SN {$data['sn']} terdaftar di Port {$data['port']} Index {$index} OLT.")
+                                ->success()
+                                ->send();
+                                
+                        } catch (\Exception $e) {
+                            $notification->title('Gagal Auto Provisioning')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
+
+                Tables\Actions\Action::make('ubah_bandwidth')
+                    ->label('Ubah Bandwidth')
+                    ->icon('heroicon-o-arrows-up-down')
+                    ->color('warning')
+                    ->form([
+                        \Filament\Forms\Components\Select::make('internet_package_id')
+                            ->label('Paket Internet Baru')
+                            ->options(\App\Models\InternetPackage::pluck('nama_paket', 'id'))
+                            ->required(),
+                        \Filament\Forms\Components\TextInput::make('mikrotik_profile')
+                            ->label('Nama Profil PPPoE di MikroTik')
+                            ->placeholder('Contoh: 50M_UP')
+                            ->required()
+                            ->helperText('Pastikan nama profil persis dengan yang ada di /ppp/profile MikroTik'),
+                    ])
+                    ->action(function ($record, array $data, \Filament\Notifications\Notification $notification) {
+                        try {
+                            $record->update([
+                                'internet_package_id' => $data['internet_package_id']
+                            ]);
+                            
+                            $mtService = new \App\Services\MikrotikService();
+                            $success = $mtService->updateSecretProfile($record, $data['mikrotik_profile']);
+                            
+                            // 🚀 [FreeRADIUS] Sinkronisasi Paket
+                            if ($record->username_pppoe) {
+                                $radius = new \App\Services\RadiusService();
+                                $radius->changeProfile($record->username_pppoe, $data['mikrotik_profile']);
+                            }
+
+                            if ($success) {
+                                $notification->title('Bandwidth Berhasil Diubah')
+                                    ->body("Profil PPPoE MikroTik diperbarui ke {$data['mikrotik_profile']} dan sesi telah di-reconnect.")
+                                    ->success()
+                                    ->send();
+                            } else {
+                                $notification->title('Sebagian Berhasil')
+                                    ->body('Paket database berubah, namun sinkronisasi MikroTik gagal. Cek koneksi server.')
+                                    ->warning()
+                                    ->send();
+                            }
+                        } catch (\Exception $e) {
+                            $notification->title('Gagal Mengubah Bandwidth')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
+
+                Tables\Actions\Action::make('reboot_modem')
+                    ->label('Reboot Modem')
+                    ->icon('heroicon-o-power')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading('Reboot Modem (ONT) Pelanggan')
+                    ->modalDescription('Apakah Anda yakin ingin me-restart modem milik pelanggan ini secara remote? Internet akan terputus sesaat.')
+                    ->visible(fn ($record) => !empty($record->pon_olt) && $record->olt_server_id)
+                    ->action(function ($record, \Filament\Notifications\Notification $notification) {
+                        try {
+                            // Extract port and index from pon_olt e.g. "1/1/3:12"
+                            if (preg_match('/1\/1\/(\d+):(\d+)/', $record->pon_olt, $matches)) {
+                                $port = $matches[1];
+                                $index = $matches[2];
+                                
+                                $olt = \App\Models\OltServer::find($record->olt_server_id);
+                                $oltService = new \App\Services\ZteOltService($olt);
+                                $success = $oltService->rebootOnu($port, $index);
+                                
+                                if ($success) {
+                                    $notification->title('Perintah Reboot Dikirim')
+                                        ->body("Modem pada OLT Port {$port} Index {$index} sedang di-restart.")
+                                        ->success()
+                                        ->send();
+                                } else {
+                                    throw new \Exception("Gagal mengeksekusi reboot di OLT.");
+                                }
+                            } else {
+                                throw new \Exception("Format PON OLT tidak valid. Harus 1/1/PORT:INDEX.");
+                            }
+                        } catch (\Exception $e) {
+                            $notification->title('Gagal Reboot Modem')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
+
+                Tables\Actions\Action::make('cek_redaman')
+                    ->label('Cek Redaman')
+                    ->icon('heroicon-o-signal')
+                    ->color('info')
+                    ->visible(fn ($record) => !empty($record->pon_olt) && $record->olt_server_id)
+                    ->action(function ($record, \Filament\Notifications\Notification $notification) {
+                        try {
+                            if (preg_match('/1\/1\/(\d+):(\d+)/', $record->pon_olt, $matches)) {
+                                $port = $matches[1];
+                                $index = $matches[2];
+                                
+                                $olt = \App\Models\OltServer::find($record->olt_server_id);
+                                $oltService = new \App\Services\ZteOltService($olt);
+                                $rx = $oltService->checkAttenuation($port, $index);
+                                
+                                if ($rx !== null) {
+                                    $val = (float) $rx;
+                                    $status = 'Aman 🟢';
+                                    if ($val < -27) {
+                                        $status = 'Kritis 🔴';
+                                    } elseif ($val < -24) {
+                                        $status = 'Waspada 🟡';
+                                    }
+                                    
+                                    $notification->title('Status Redaman Modem')
+                                        ->body("Nilai Rx Power: **{$rx} dBm**\nStatus: {$status}")
+                                        ->success()
+                                        ->send();
+                                } else {
+                                    throw new \Exception("Gagal membaca redaman dari OLT. Modem mungkin LOS atau OLT tidak merespons.");
+                                }
+                            }
+                        } catch (\Exception $e) {
+                            $notification->title('Gagal Cek Redaman')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
+                    
+                Tables\Actions\Action::make('chat_wa')
+                    ->label('Sapa / Chat WA')
+                    ->icon('heroicon-o-chat-bubble-oval-left-ellipsis')
+                    ->color('info')
+                    ->url(function ($record) {
+                        $phone = $record->whatsapp ?? $record->phone ?? '';
+                        if (str_starts_with($phone, '0')) {
+                            $phone = '62' . substr($phone, 1);
+                        }
+                        $text = "Halo Bapak/Ibu *{$record->name}*,\nIni dengan CS ARMEDIA. Ada yang bisa kami bantu terkait layanan internet Anda di rumah?";
+                        return "https://wa.me/{$phone}?text=" . urlencode($text);
+                    })
+                    ->openUrlInNewTab()
+                    ->visible(fn ($record) => !empty($record->whatsapp) || !empty($record->phone)),
+                    
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\RestoreAction::make(),
                 Tables\Actions\ForceDeleteAction::make(),
@@ -281,6 +524,7 @@ class CustomerResource extends Resource
     {
         return [
             RelationManagers\InvoicesRelationManager::class,
+            RelationManagers\TicketsRelationManager::class,
             RelationManagers\NetwatchLogsRelationManager::class,
         ];
     }

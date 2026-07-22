@@ -105,4 +105,83 @@ class TypebotBridgeController extends Controller
             return response()->json(['error' => 'Gagal generate link: ' . $e->getMessage()], 500);
         }
     }
+
+    /**
+     * Membuat tiket komplain via Typebot
+     */
+    public function createTicket(Request $request)
+    {
+        $validated = $request->validate([
+            'customer_id' => 'required|exists:customers,id',
+            'issue_type' => 'required|string',
+            'description' => 'required|string'
+        ]);
+
+        $ticket = \App\Models\Ticket::create([
+            'customer_id' => $validated['customer_id'],
+            'issue_type' => $validated['issue_type'],
+            'description' => $validated['description'],
+            'status' => 'open' // asumsi enum open
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'ticket_number' => $ticket->ticket_number ?? 'TKT-'.$ticket->id,
+            'message' => 'Tiket berhasil dibuat.'
+        ]);
+    }
+
+    /**
+     * Reboot Modem pelanggan via OLT
+     */
+    public function rebootModem(Request $request, $customerId)
+    {
+        $customer = Customer::find($customerId);
+        if (!$customer || !$customer->pon_olt) {
+            return response()->json(['error' => 'Data OLT tidak ditemukan untuk pelanggan ini.'], 404);
+        }
+
+        // Contoh: pon_olt = "1/1/1:5" (board/slot/port:index)
+        try {
+            $oltService = new \App\Services\ZteOltService();
+            $success = $oltService->rebootOnu($customer->pon_olt);
+
+            if ($success) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Sinyal restart telah dikirim ke modem. Mohon tunggu 2-3 menit sampai modem menyala kembali.'
+                ]);
+            }
+
+            return response()->json(['success' => false, 'message' => 'Gagal merestart modem. OLT tidak merespons.'], 500);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Cek status konektivitas / dBm
+     */
+    public function checkConnectivity(Request $request, $customerId)
+    {
+        $customer = Customer::find($customerId);
+        if (!$customer || !$customer->pon_olt) {
+            return response()->json(['error' => 'Data OLT tidak ditemukan'], 404);
+        }
+
+        try {
+            $oltService = new \App\Services\ZteOltService();
+            $status = $oltService->getOnuStatus($customer->pon_olt);
+
+            // Misalnya return array: ['status' => 'working', 'rx_power' => '-22.5']
+            return response()->json([
+                'success' => true,
+                'status' => $status['status'] ?? 'Unknown',
+                'rx_power' => $status['rx_power'] ?? 'N/A',
+                'message' => "Status modem: " . ($status['status'] ?? 'Unknown') . ", Sinyal: " . ($status['rx_power'] ?? 'N/A') . " dBm"
+            ]);
+        } catch (\Exception $e) {
+             return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
 }

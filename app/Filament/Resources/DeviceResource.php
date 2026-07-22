@@ -18,7 +18,7 @@ class DeviceResource extends Resource
     protected static ?string $model = Device::class;
 
     protected static ?string $navigationIcon  = 'heroicon-o-cpu-chip';
-    protected static ?string $navigationGroup = 'Jaringan & Monitoring';
+    protected static ?string $navigationGroup = 'Jaringan & Infrastruktur';
     protected static ?string $navigationLabel = 'Perangkat ONT';
     protected static ?string $pluralModelLabel = 'Perangkat ONT';
     protected static ?string $modelLabel       = 'Perangkat ONT';
@@ -106,20 +106,19 @@ class DeviceResource extends Resource
                                     Forms\Components\Tabs\Tab::make('Data OLT (ZTE)')
                                         ->schema([
                                             Forms\Components\Grid::make(3)->schema([
-                                                Forms\Components\TextInput::make('olt_ip')->label('IP OLT')->required()->default('192.168.100.2'),
-                                                Forms\Components\TextInput::make('olt_user')->label('Username OLT')->required()->default('admin'),
-                                                Forms\Components\TextInput::make('olt_pass')->label('Password OLT')->password()->required(),
-                                            ]),
-                                            Forms\Components\Grid::make(3)->schema([
+                                                Forms\Components\Select::make('olt_server_id')
+                                                    ->label('Server OLT')
+                                                    ->options(\App\Models\OltServer::where('is_active', true)->pluck('name', 'id'))
+                                                    ->required(),
                                                 Forms\Components\TextInput::make('port')->label('Port OLT (1-16)')->numeric()->required(),
                                                 Forms\Components\TextInput::make('index')->label('Index Kosong')->numeric()->required(),
-                                                Forms\Components\Toggle::make('is_replace')->label('Ganti ONT (Replace)')->default(false)->inline(false),
                                             ]),
-                                            Forms\Components\Grid::make(2)->schema([
+                                            Forms\Components\Grid::make(3)->schema([
                                                 Forms\Components\TextInput::make('sn')->label('Serial Number (SN)')->default($record->serial_number)->required()->maxLength(12)->minLength(12),
                                                 Forms\Components\Select::make('profile')->label('Profile')->options(['20M_UP' => '20M_UP', '30M_UP' => '30M_UP', '50M_UP' => '50M_UP'])->required(),
                                                 Forms\Components\TextInput::make('vlan')->label('VLAN')->numeric()->default(1521)->required(),
                                             ]),
+                                            Forms\Components\Toggle::make('is_replace')->label('Ganti ONT (Replace)')->default(false)->inline(false),
                                         ]),
                                     Forms\Components\Tabs\Tab::make('Data Pelanggan & Netwatch')
                                         ->schema([
@@ -135,11 +134,11 @@ class DeviceResource extends Resource
                                                 Forms\Components\TextInput::make('teknisi')->label('Nama Teknisi')->placeholder('Contoh: AGAN')->required(),
                                             ]),
                                             Forms\Components\Fieldset::make('MikroTik Detail')->schema([
-                                                Forms\Components\TextInput::make('mikrotik_ip')->label('IP MikroTik')->required()->default('49.156.62.10'),
-                                                Forms\Components\TextInput::make('mikrotik_port')->label('Port SSH MikroTik')->numeric()->required()->default(22022),
-                                                Forms\Components\TextInput::make('mikrotik_user')->label('Username MikroTik')->required()->default('cs26'),
-                                                Forms\Components\TextInput::make('mikrotik_pass')->label('Password MikroTik')->password()->required(),
-                                            ])->columns(4),
+                                                Forms\Components\Select::make('mikrotik_server_id')
+                                                    ->label('Server MikroTik')
+                                                    ->options(\App\Models\MikrotikServer::where('is_active', true)->pluck('name', 'id'))
+                                                    ->required(),
+                                            ]),
                                         ]),
                                 ]),
                         ];

@@ -19,7 +19,7 @@ class OdpResource extends Resource
     protected static ?string $model = Odp::class;
 
     protected static ?string $navigationIcon  = 'heroicon-o-signal';
-    protected static ?string $navigationGroup = 'Jaringan & Monitoring';
+    protected static ?string $navigationGroup = 'Jaringan & Infrastruktur';
     protected static ?string $navigationLabel = 'ODP';
     protected static ?string $pluralModelLabel = 'ODP';
     protected static ?string $modelLabel       = 'ODP';

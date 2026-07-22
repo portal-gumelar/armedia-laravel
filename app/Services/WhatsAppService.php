@@ -4,80 +4,85 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use App\Models\Invoice;
 
 class WhatsAppService
 {
-    protected string $token;
-    protected string $endpoint;
-
-    public function __construct()
-    {
-        // Akan diambil dari settings/database, sementara pakai env
-        $this->token = env('FONNTE_TOKEN', '');
-        $this->endpoint = 'https://api.fonnte.com/send';
-    }
-
     /**
-     * Send a plain text message.
+     * Send a WhatsApp message using WAHA (WhatsApp HTTP API).
+     *
+     * @param string $phone
+     * @param string $message
+     * @param string|null $fileUrl (optional PDF URL)
+     * @return bool
      */
-    public function sendMessage(string $target, string $message): bool
+    public static function sendMessage(string $phone, string $message, ?string $fileUrl = null): bool
     {
-        if (empty($this->token)) {
-            Log::warning("Fonnte token is not set. Cannot send WhatsApp message to $target.");
+        $endpoint = config('services.waha.endpoint');
+        $session  = config('services.waha.session');
+        
+        // Cek apakah WAHA diaktifkan
+        if (!$endpoint) {
+            Log::warning('WhatsAppService: WAHA_ENDPOINT is not set in .env');
             return false;
         }
 
-        try {
-            $response = Http::withHeaders([
-                'Authorization' => $this->token
-            ])->post($this->endpoint, [
-                'target' => $target,
-                'message' => $message,
-                'countryCode' => '62',
-            ]);
+        // Format phone number to 62...
+        $phone = self::formatPhone($phone);
+        // Format chatId untuk WAHA (nomor@c.us)
+        $chatId = $phone . '@c.us';
 
-            if ($response->successful() && isset($response['status']) && $response['status'] == true) {
+        try {
+            if ($fileUrl) {
+                // Endpoint untuk kirim file/dokumen
+                $url = rtrim($endpoint, '/') . '/api/sendFile';
+                $payload = [
+                    'chatId'  => $chatId,
+                    'file'    => ['url' => $fileUrl],
+                    'caption' => $message,
+                    'session' => $session,
+                ];
+            } else {
+                // Endpoint untuk kirim teks biasa
+                $url = rtrim($endpoint, '/') . '/api/sendText';
+                $payload = [
+                    'chatId'  => $chatId,
+                    'text'    => $message,
+                    'session' => $session,
+                ];
+            }
+
+            // WAHA biasanya tidak memerlukan Bearer token, kecuali disetting khusus
+            $response = Http::post($url, $payload);
+
+            if ($response->successful()) {
+                Log::info('WhatsApp message sent to ' . $phone, ['response' => $response->json()]);
                 return true;
             }
 
-            Log::error("Failed to send WhatsApp message to $target: " . $response->body());
+            Log::error('WAHA API Error for ' . $phone, [
+                'status' => $response->status(),
+                'response' => $response->json(),
+            ]);
+
             return false;
         } catch (\Exception $e) {
-            Log::error("WhatsAppService Error: " . $e->getMessage());
+            Log::error('WhatsAppService Exception (WAHA): ' . $e->getMessage());
             return false;
         }
     }
 
     /**
-     * Send Invoice Notification (Lunas/Belum Lunas)
+     * Format phone number to standard Indonesian format (62...)
      */
-    public function sendInvoiceNotification(Invoice $invoice): bool
+    public static function formatPhone(string $phone): string
     {
-        $customer = $invoice->customer;
-        if (!$customer || empty($customer->whatsapp)) {
-            return false;
+        // Remove spaces, dashes, etc
+        $phone = preg_replace('/[^0-9]/', '', $phone);
+
+        if (str_starts_with($phone, '08')) {
+            $phone = '628' . substr($phone, 2);
         }
 
-        $status = $invoice->status;
-        $totalFormatted = "Rp " . number_format($invoice->total_amount, 0, ',', '.');
-        $period = \Carbon\Carbon::parse($invoice->due_date)->translatedFormat('F Y');
-
-        if ($status->value === 'lunas') {
-            $message = "Halo *{$customer->name}*,\n\n";
-            $message .= "Terima kasih, pembayaran tagihan Internet Anda untuk periode *{$period}* sebesar *{$totalFormatted}* telah kami terima.\n\n";
-            $message .= "Status: *LUNAS*\n";
-            $message .= "Layanan internet Anda sudah aktif kembali. Terima kasih telah menggunakan layanan Armedia.\n\n";
-            $message .= "_Pesan ini dikirim otomatis oleh sistem Armedia._";
-        } else {
-            $message = "Halo *{$customer->name}*,\n\n";
-            $message .= "Ini adalah informasi tagihan Internet Anda untuk periode *{$period}*.\n\n";
-            $message .= "Total Tagihan: *{$totalFormatted}*\n";
-            $message .= "Jatuh Tempo: *" . \Carbon\Carbon::parse($invoice->due_date)->translatedFormat('d F Y') . "*\n\n";
-            $message .= "Mohon lakukan pembayaran sebelum jatuh tempo untuk menghindari isolir otomatis.\n\n";
-            $message .= "_Pesan ini dikirim otomatis oleh sistem Armedia._";
-        }
-
-        return $this->sendMessage($customer->whatsapp, $message);
+        return $phone;
     }
 }

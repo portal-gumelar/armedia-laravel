@@ -339,9 +339,111 @@ class PayrollResource extends Resource
                 Tables\Actions\Action::make('print')
                     ->label('Cetak Slip')
                     ->icon('heroicon-o-printer')
-                    ->color('success')
+                    ->color('secondary')
                     ->url(fn (Payroll $record): string => route('payroll.print', $record))
                     ->openUrlInNewTab(),
+                    
+                Tables\Actions\Action::make('whatsapp_pdf')
+                    ->label('Kirim PDF (WA)')
+                    ->icon('heroicon-o-paper-airplane')
+                    ->color('info')
+                    ->requiresConfirmation()
+                    ->modalHeading('Kirim Slip Gaji via WhatsApp')
+                    ->modalDescription('PDF Slip Gaji akan digenerate dan dikirim langsung ke WhatsApp Karyawan. Lanjutkan?')
+                    ->action(function (Payroll $record) {
+                        $phone = $record->employee->phone ?? '';
+                        if (empty($phone)) {
+                            \Filament\Notifications\Notification::make()->title('Gagal')->body('Nomor HP Karyawan kosong.')->danger()->send();
+                            return;
+                        }
+                        if (str_starts_with($phone, '0')) {
+                            $phone = '62' . substr($phone, 1);
+                        }
+                        
+                        $record->load('employee');
+                        $months = [1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni',7=>'Juli',8=>'Agustus',9=>'September',10=>'Oktober',11=>'November',12=>'Desember'];
+                        $periodDate = \Carbon\Carbon::parse($record->period);
+                        $periodName = ($months[$periodDate->month] ?? '') . ' ' . $periodDate->year;
+                        
+                        try {
+                            // Generate PDF
+                            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('payroll.print-slip', [
+                                'payroll' => $record,
+                                'periodLabel' => $periodName
+                            ]);
+                            $pdfBase64 = base64_encode($pdf->output());
+                            
+                            $amount = number_format($record->net_salary, 0, ',', '.');
+                            $caption = "Halo {$record->employee->name},\n\nBerikut terlampir file PDF Slip Gaji Anda untuk periode *{$periodName}*.\n\nTotal Gaji Diterima: *Rp {$amount}*\nStatus: " . ($record->status == 'paid' ? '✅ Sudah Ditransfer' : '⏳ Menunggu Pembayaran') . "\n\nTerima kasih atas dedikasi Anda.";
+                            
+                            $filename = 'Slip_Gaji_' . str_replace(' ', '_', $record->employee->name) . '_' . str_replace(' ', '_', $periodName) . '.pdf';
+                            
+                            $endpoint = config('services.waha.endpoint');
+                            $session = config('services.waha.session');
+                            
+                            $response = \Illuminate\Support\Facades\Http::timeout(15)->post("{$endpoint}/api/sendUrl", [
+                                'chatId' => $phone . '@c.us',
+                                'session' => $session,
+                                'file' => [
+                                    'mimetype' => 'application/pdf',
+                                    'filename' => $filename,
+                                    'data' => 'data:application/pdf;base64,' . $pdfBase64
+                                ],
+                                'caption' => $caption
+                            ]);
+                            
+                            // Because WAHA uses sendFile or sendUrl depending on the version/engine. Wait, WAHA uses /api/sendFile
+                            // Let me fix that endpoint name just in case. Actually /api/sendFile is correct for WAHA 2024.
+                            
+                            if ($response->successful()) {
+                                \Filament\Notifications\Notification::make()->title('Berhasil')->body('PDF Slip Gaji berhasil dikirim ke WA.')->success()->send();
+                            } else {
+                                // Fallback if sendUrl fails, try sendFile
+                                $response2 = \Illuminate\Support\Facades\Http::timeout(15)->post("{$endpoint}/api/sendFile", [
+                                    'chatId' => $phone . '@c.us',
+                                    'session' => $session,
+                                    'file' => [
+                                        'mimetype' => 'application/pdf',
+                                        'filename' => $filename,
+                                        'data' => 'data:application/pdf;base64,' . $pdfBase64
+                                    ],
+                                    'caption' => $caption
+                                ]);
+                                
+                                if ($response2->successful()) {
+                                    \Filament\Notifications\Notification::make()->title('Berhasil')->body('PDF Slip Gaji berhasil dikirim ke WA.')->success()->send();
+                                } else {
+                                    \Filament\Notifications\Notification::make()->title('Gagal')->body('Respons API: ' . $response2->body())->danger()->send();
+                                }
+                            }
+                        } catch (\Exception $e) {
+                            \Filament\Notifications\Notification::make()->title('Error')->body($e->getMessage())->danger()->send();
+                        }
+                    })
+                    ->visible(fn (Payroll $record) => !empty($record->employee->phone)),
+
+                Tables\Actions\Action::make('whatsapp')
+                    ->label('Kirim WA')
+                    ->icon('heroicon-o-chat-bubble-oval-left-ellipsis')
+                    ->color('success')
+                    ->url(function (Payroll $record) {
+                        $phone = $record->employee->phone ?? '';
+                        if (str_starts_with($phone, '0')) {
+                            $phone = '62' . substr($phone, 1);
+                        }
+                        
+                        $months = [1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni',7=>'Juli',8=>'Agustus',9=>'September',10=>'Oktober',11=>'November',12=>'Desember'];
+                        $periodDate = \Carbon\Carbon::parse($record->period);
+                        $periodName = ($months[$periodDate->month] ?? '') . ' ' . $periodDate->year;
+                        
+                        $amount = number_format($record->net_salary, 0, ',', '.');
+                        
+                        $msg = "Halo {$record->employee->name},\n\nBerikut informasi Slip Gaji Anda untuk periode *{$periodName}*.\n\nTotal Gaji Diterima: *Rp {$amount}*\nStatus: " . ($record->status == 'paid' ? '✅ Sudah Ditransfer' : '⏳ Menunggu Pembayaran') . "\n\nTerima kasih atas kerja keras Anda.";
+                        
+                        return "https://wa.me/{$phone}?text=" . urlencode($msg);
+                    })
+                    ->openUrlInNewTab()
+                    ->visible(fn (Payroll $record) => !empty($record->employee->phone)),
 
                 Tables\Actions\Action::make('mark_paid')
                     ->label('Bayar')

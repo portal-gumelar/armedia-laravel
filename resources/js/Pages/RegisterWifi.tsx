@@ -45,7 +45,8 @@ export default function RegisterWifi({ villages = [], packages = [] }: any) {
   const { data: form, setData: setForm } = useForm({
     ...initialForm,
     village_id: "",
-    package_id: ""
+    package_id: "",
+    ref: ""
   });
   
   const [loading, setLoading] = useState(false);
@@ -68,6 +69,10 @@ export default function RegisterWifi({ villages = [], packages = [] }: any) {
       // flash success handled by inertia
     }
     const params = new URLSearchParams(window.location.search);
+    const refParam = params.get("ref");
+    if (refParam) {
+      setForm(prev => ({ ...prev, ref: refParam }));
+    }
     const paketParam = params.get("paket");
     if (paketParam) {
       import("../constants/packages").then(({ PACKAGES }) => {
@@ -327,7 +332,8 @@ export default function RegisterWifi({ villages = [], packages = [] }: any) {
       source_info: form.sumberInfo || "Rekomendasi Teman",
       link_google_maps: form.linkGoogleMaps || "",
       foto_ktp: finalKtpUrl || "",
-      tanggal_rencana_pasang: form.tanggalPasang || ""
+      tanggal_rencana_pasang: form.tanggalPasang || "",
+      ref: form.ref
     }, {
       preserveScroll: true,
       onSuccess: () => {

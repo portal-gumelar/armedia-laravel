@@ -2,10 +2,11 @@
 
 namespace App\Filament\Resources;
 
-use App\Enums\TicketCategory;
-use App\Enums\TicketStatus;
 use App\Filament\Resources\TicketResource\Pages;
 use App\Models\Ticket;
+use App\Enums\TicketCategory;
+use App\Enums\TicketStatus;
+use App\Enums\TicketPriority;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -17,12 +18,13 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 class TicketResource extends Resource
 {
     protected static ?string $model              = Ticket::class;
-    protected static ?string $modelLabel         = 'Tiket Gangguan';
-    protected static ?string $pluralModelLabel   = 'Tiket Gangguan';
+    protected static ?string $modelLabel         = 'Tiket Pengaduan';
+    protected static ?string $pluralModelLabel   = 'Tiket Pengaduan';
     protected static ?string $recordTitleAttribute = 'ticket_no';
-    protected static ?string $navigationIcon     = 'heroicon-o-wrench-screwdriver';
-    protected static ?string $navigationGroup    = 'Operasional ISP';
-    protected static ?int    $navigationSort     = 6;
+    protected static ?string $navigationIcon     = 'heroicon-o-ticket';
+    protected static ?string $navigationGroup    = 'Layanan Pelanggan';
+    protected static ?string $navigationLabel    = 'Tiket Pengaduan';
+    protected static ?int    $navigationSort     = 8;
 
     public static function getNavigationBadge(): ?string
     {
@@ -43,7 +45,7 @@ class TicketResource extends Resource
     public static function form(Form $form): Form
     {
         return $form->schema([
-            Forms\Components\Section::make('Info Tiket')
+            Forms\Components\Section::make('Informasi Utama')
                 ->columns(2)
                 ->schema([
                     Forms\Components\TextInput::make('ticket_no')
@@ -64,9 +66,16 @@ class TicketResource extends Resource
                         ->options(TicketCategory::class)
                         ->required(),
 
+                    Forms\Components\Select::make('priority')
+                        ->label('Tingkat Prioritas')
+                        ->options(TicketPriority::class)
+                        ->default(TicketPriority::LOW->value)
+                        ->helperText('Di-assign otomatis jika dikosongkan.'),
+
                     Forms\Components\Select::make('status')
                         ->label('Status')
                         ->options(TicketStatus::class)
+                        ->default(TicketStatus::OPEN->value)
                         ->required(),
 
                     Forms\Components\Textarea::make('description')
@@ -96,7 +105,6 @@ class TicketResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->defaultSort('created_at', 'desc')
             ->columns([
                 Tables\Columns\TextColumn::make('ticket_no')
                     ->label('No. Tiket')
@@ -109,6 +117,11 @@ class TicketResource extends Resource
                     ->label('Pelanggan')
                     ->searchable()
                     ->description(fn(Ticket $r) => $r->customer?->id_arm . ' — ' . ($r->customer?->whatsapp ?? '-')),
+
+                Tables\Columns\TextColumn::make('priority')
+                    ->label('Prioritas')
+                    ->badge()
+                    ->sortable(query: fn (Builder $query, string $direction) => $query->orderByRaw("CASE priority WHEN 'urgent' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 END $direction")),
 
                 Tables\Columns\TextColumn::make('category')
                     ->label('Kategori')
@@ -132,6 +145,9 @@ class TicketResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                Tables\Filters\SelectFilter::make('priority')
+                    ->options(TicketPriority::class)
+                    ->label('Prioritas'),
                 Tables\Filters\SelectFilter::make('status')
                     ->options(TicketStatus::class)
                     ->label('Status'),
@@ -141,7 +157,6 @@ class TicketResource extends Resource
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
-                // Aksi cepat: Selesaikan Tiket
                 Tables\Actions\Action::make('resolve')
                     ->label('Selesaikan')
                     ->icon('heroicon-o-check-circle')
@@ -162,6 +177,60 @@ class TicketResource extends Resource
                     })
                     ->requiresConfirmation(false),
 
+                Tables\Actions\Action::make('kirimWaTeknisi')
+                    ->label('WA Teknisi (Gangguan)')
+                    ->icon('heroicon-o-signal-slash')
+                    ->color('warning')
+                    ->url(function ($record) {
+                        $customer = $record->customer;
+                        $phone = $customer?->whatsapp ?? '';
+                        if (str_starts_with($phone, '0')) {
+                            $phone = '62' . substr($phone, 1);
+                        } elseif (!str_starts_with($phone, '62') && !empty($phone)) {
+                            $phone = '62' . $phone;
+                        }
+
+                        $name = $customer?->name ?? 'Bapak/Ibu';
+                        $idPelanggan = $customer?->id_arm ?? '-';
+                        $ticketNo = $record->ticket_no ?? '-';
+                        $teknisi = auth()->user()->name ?? 'Teknisi ARMEDIA';
+                        
+                        $text = "Selamat siang, nama saya *{$teknisi}*, teknisi ARMEDIA yang menangani gangguan.\n\n"
+                              . "TIKET : {$ticketNo}\n"
+                              . "ID PEL: {$idPelanggan}\n\n"
+                              . "STATUS JARINGAN PELANGGAN :: hasil daya ukur jaringan *loss/offline*. Normalnya adalah -15 dbm s/d -22 dbm.\n\n"
+                              . "Jika tidak segera diperbaiki maka layanan internet akan terganggu / mengalami lambat, putus-putus atau bahkan tidak ada koneksi internet.\n"
+                              . "Terkait dengan hal tersebut, mohon dibantu untuk *alamat lengkap serta patokan alamatnya* agar kami dapat memperbaiki layanan internet {$name}.\n\n"
+                              . "Harap menghubungi tim teknisi kami jika terjadi kendala lebih lanjut agar segera di-follow up perbaikannya.\n\n"
+                              . "Izin konfirmasi untuk jaringan internetnya. Ini dari ARMEDIA untuk referensi, terukur sistem terbaca mati/offline di cek sistem. Mohon ditunggu ya jika internetnya kendala loss merah karena kendala dari sisi kabelnya 🙏🏻";
+                              
+                        return "https://wa.me/{$phone}?text=" . urlencode($text);
+                    })
+                    ->openUrlInNewTab(),
+                    
+                Tables\Actions\Action::make('kirimWaSelesai')
+                    ->label('WA (Telah Selesai)')
+                    ->icon('heroicon-o-check-badge')
+                    ->color('success')
+                    ->url(function ($record) {
+                        $customer = $record->customer;
+                        $phone = $customer?->whatsapp ?? '';
+                        if (str_starts_with($phone, '0')) {
+                            $phone = '62' . substr($phone, 1);
+                        } elseif (!str_starts_with($phone, '62') && !empty($phone)) {
+                            $phone = '62' . $phone;
+                        }
+
+                        $name = $customer?->name ?? 'Bapak/Ibu';
+                        $ticketNo = $record->ticket_no ?? '-';
+                        
+                        $text = "Halo {$name},\n\nKami informasikan bahwa Tiket Laporan Gangguan Anda (*{$ticketNo}*) telah selesai ditangani oleh tim teknisi kami.\n\nLayanan internet seharusnya sudah kembali normal. Silakan di-restart (cabut-pasang kabel power) modem di rumah Anda jika masih ada kendala, dan jangan ragu menghubungi kami kembali.\n\nTerima kasih atas kesabaran Anda! 🚀";
+                              
+                        return "https://wa.me/{$phone}?text=" . urlencode($text);
+                    })
+                    ->openUrlInNewTab()
+                    ->visible(fn ($record) => $record->status === \App\Enums\TicketStatus::RESOLVED || $record->status === \App\Enums\TicketStatus::CLOSED),
+
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\RestoreAction::make(),
             ])
@@ -177,7 +246,9 @@ class TicketResource extends Resource
     {
         return parent::getEloquentQuery()
             ->with(['customer.village'])
-            ->withoutGlobalScopes([SoftDeletingScope::class]);
+            ->withoutGlobalScopes([SoftDeletingScope::class])
+            ->orderByRaw("CASE priority WHEN 'urgent' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 ELSE 5 END")
+            ->orderBy('created_at', 'asc');
     }
 
     public static function getRelations(): array

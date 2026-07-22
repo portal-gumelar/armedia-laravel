@@ -166,7 +166,15 @@ class ImportMasterDataCommand extends Command
             $empty = true;
             for ($c = 1; $c <= $highestCol; $c++) {
                 $cell = $sheet->getCellByColumnAndRow($c, $r);
-                $row[$c] = $cell->getValue();
+                $val = $cell->getValue();
+                if (is_string($val) && str_starts_with($val, '=')) {
+                    try {
+                        $val = $cell->getCalculatedValue();
+                    } catch (\Exception $e) {
+                        $val = $cell->getOldCalculatedValue() ?: $val;
+                    }
+                }
+                $row[$c] = $val;
                 if ($c <= $stopIfEmptyCols && $row[$c] !== null && $row[$c] !== '') {
                     $empty = false;
                 }
@@ -197,7 +205,7 @@ class ImportMasterDataCommand extends Command
                 ['kode' => $kode],
                 [
                     'nama_paket' => $this->v($row, 2),
-                    'speed_mbps' => (int) ($this->v($row, 4) ?? 0),
+                    'kecepatan' => (int) ($this->v($row, 4) ?? 0),
                     'harga' => $this->toAmount($this->v($row, 5)),
                     'alokasi_ip' => $this->v($row, 6),
                     'is_active' => true,
@@ -355,14 +363,16 @@ class ImportMasterDataCommand extends Command
 
             $customer = ($idPel = $this->v($row, 8)) ? Customer::firstWhere('id_arm', $idPel) : null;
 
+            $deviceCode = $kodeId ?: ($sn ?: 'DEV-'.uniqid());
+
             Device::updateOrCreate(
-                $kodeId ? ['kode_id' => $kodeId] : ['sn' => $sn],
+                ['device_code' => $deviceCode],
                 [
-                    'nama' => $this->v($row, 2) ?? 'ONT',
+                    'name' => $this->v($row, 2) ?? 'ONT',
                     'model' => $this->v($row, 3),
-                    'sn' => $sn,
+                    'serial_number' => $sn,
                     'tgl_ambil_dari_stok' => $this->toDate($this->v($row, 6)),
-                    'status' => $this->v($row, 7),
+                    'status' => str_contains(strtolower((string)$this->v($row, 7)), 'terpasang') ? 'terpasang' : 'stok',
                     'customer_id' => $customer?->id,
                     'id_lama_referensi' => $this->v($row, 10),
                     'kondisi' => $this->v($row, 11),

@@ -54,14 +54,16 @@ class ProvisionOltDeviceJob implements ShouldQueue
     protected function provisionZteOlt(): void
     {
         $d = $this->data;
-        $telnet = new TelnetClient($d['olt_ip'], 23, 20); // 20s timeout
+        $olt = \App\Models\OltServer::findOrFail($d['olt_server_id']);
+        
+        $telnet = new TelnetClient($olt->host, $olt->port ?? 23, 20); // 20s timeout
         $telnet->connect();
 
         // 1. Login
         $telnet->waitPrompt('Username:');
-        $telnet->writeCommand($d['olt_user']);
+        $telnet->writeCommand($olt->username);
         $telnet->waitPrompt('Password:');
-        $telnet->writeCommand($d['olt_pass']);
+        $telnet->writeCommand($olt->password);
         $telnet->waitPrompt('>'); // Default user prompt
 
         // 2. Enable & Config Terminal
@@ -142,7 +144,9 @@ class ProvisionOltDeviceJob implements ShouldQueue
     protected function provisionMikrotikNetwatch(): void
     {
         $d = $this->data;
-        $ssh = new MikrotikSshService($d['mikrotik_ip'], $d['mikrotik_user'], $d['mikrotik_pass'], $d['mikrotik_port']);
+        $mt = \App\Models\MikrotikServer::findOrFail($d['mikrotik_server_id']);
+        
+        $ssh = new MikrotikSshService($mt->host, $mt->username, $mt->password, $mt->port ?? 22022);
         $ssh->connect();
 
         $comment = "{$d['nama']} - {$d['sn']} - {$d['hp']} - {$d['ssid']} - {$d['rt_rw']} - {$d['desa']} - {$d['teknisi']}";

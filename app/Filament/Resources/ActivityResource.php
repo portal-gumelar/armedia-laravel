@@ -15,7 +15,7 @@ class ActivityResource extends Resource
     protected static ?string $model = Activity::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-list';
-    protected static ?string $navigationGroup = 'Pengaturan';
+    protected static ?string $navigationGroup = 'Pengaturan & Sistem';
     protected static ?string $navigationLabel = 'Activity Log';
     protected static ?string $pluralModelLabel = 'Activity Log';
     protected static ?string $modelLabel = 'Activity';

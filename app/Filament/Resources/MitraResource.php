@@ -18,7 +18,7 @@ class MitraResource extends Resource
     protected static ?string $navigationLabel = 'Data Mitra / Reseller';
     protected static ?string $pluralModelLabel = 'Data Mitra';
     protected static ?string $modelLabel = 'Mitra';
-    protected static ?string $navigationGroup = 'Pengaturan';
+    protected static ?string $navigationGroup = 'Mitra & Ekosistem';
     protected static ?int $navigationSort = 10;
 
     public static function form(Form $form): Form

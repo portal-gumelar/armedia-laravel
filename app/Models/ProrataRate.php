@@ -7,10 +7,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ProrataRate extends Model
 {
-    protected $fillable = ['tanggal_pasang', 'product_id', 'jumlah'];
+    protected $guarded = [];
 
     public function product(): BelongsTo
     {
-        return $this->belongsTo(Product::class);
+        return $this->belongsTo(InternetPackage::class, 'product_id');
     }
 }

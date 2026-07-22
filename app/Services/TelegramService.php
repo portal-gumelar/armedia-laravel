@@ -9,8 +9,8 @@ class TelegramService
 {
     public static function sendMessage(string $message): void
     {
-        $botToken = env('TELEGRAM_BOT_TOKEN');
-        $chatId = env('TELEGRAM_CHAT_ID');
+        $botToken = config('services.telegram.bot_token');
+        $chatId = config('services.telegram.chat_id');
 
         if (empty($botToken) || empty($chatId)) {
             Log::warning('Telegram bot token or chat ID is not set.');

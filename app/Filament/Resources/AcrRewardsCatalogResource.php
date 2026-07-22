@@ -18,7 +18,7 @@ class AcrRewardsCatalogResource extends Resource
     protected static ?string $model = AcrRewardsCatalog::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-gift';
-    protected static ?string $navigationGroup = 'Member & Reward';
+    protected static ?string $navigationGroup = 'Mitra & Ekosistem';
     protected static ?string $navigationLabel = 'Katalog Hadiah';
     protected static ?string $pluralModelLabel = 'Katalog Hadiah';
     protected static ?string $modelLabel = 'Katalog Hadiah';

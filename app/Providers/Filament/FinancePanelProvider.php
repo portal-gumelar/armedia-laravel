@@ -28,7 +28,7 @@ class FinancePanelProvider extends PanelProvider
             ->path('finance')
             ->login()
             ->brandName('ARMEDIA Finance')
-            ->brandLogo('https://ik.imagekit.io/Gumelar/LogO/logo%20pt.png?updatedAt=1778213993513')
+            ->brandLogo('/images/logo-armedia.png')
             ->brandLogoHeight('2.5rem')
             ->colors([
                 'primary' => Color::Emerald,

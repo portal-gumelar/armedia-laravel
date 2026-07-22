@@ -18,7 +18,7 @@ class TestimonialResource extends Resource
     protected static ?string $model = Testimonial::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-chat-bubble-bottom-center-text';
-    protected static ?string $navigationGroup = 'Konten Website';
+    protected static ?string $navigationGroup = 'Pengaturan & Sistem';
     protected static ?string $navigationLabel = 'Testimoni';
     protected static ?string $pluralModelLabel = 'Testimoni';
     protected static ?string $modelLabel = 'Testimoni';

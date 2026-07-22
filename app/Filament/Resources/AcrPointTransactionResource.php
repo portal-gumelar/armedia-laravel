@@ -18,7 +18,7 @@ class AcrPointTransactionResource extends Resource
     protected static ?string $model = AcrPointTransaction::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-currency-dollar';
-    protected static ?string $navigationGroup = 'Member & Reward';
+    protected static ?string $navigationGroup = 'Mitra & Ekosistem';
     protected static ?string $navigationLabel = 'Riwayat Transaksi Poin';
     protected static ?string $pluralModelLabel = 'Riwayat Transaksi Poin';
     protected static ?string $modelLabel = 'Transaksi Poin';

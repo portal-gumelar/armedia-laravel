@@ -18,7 +18,7 @@ class AcrMemberResource extends Resource
     protected static ?string $model = AcrMember::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-users';
-    protected static ?string $navigationGroup = 'Member & Reward';
+    protected static ?string $navigationGroup = 'Mitra & Ekosistem';
     protected static ?string $navigationLabel = 'Data Member ACR';
     protected static ?string $pluralModelLabel = 'Data Member ACR';
     protected static ?string $modelLabel = 'Data Member ACR';

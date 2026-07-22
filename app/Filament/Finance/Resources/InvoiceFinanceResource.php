@@ -70,6 +70,35 @@ class InvoiceFinanceResource extends Resource
                     ),
             ])
             ->actions([
+                Tables\Actions\Action::make('send_wa')
+                    ->label('Kirim WA')
+                    ->icon('heroicon-o-chat-bubble-oval-left-ellipsis')
+                    ->color('info')
+                    ->requiresConfirmation()
+                    ->modalHeading('Kirim Notifikasi Tagihan WA')
+                    ->modalDescription('Kirim pesan pengingat tagihan ke WhatsApp pelanggan ini via WAHA?')
+                    ->action(function (Invoice $record) {
+                        $phone = $record->customer->whatsapp ?? $record->customer->phone ?? '';
+                        if (empty($phone)) {
+                            \Filament\Notifications\Notification::make()->title('Gagal')->body('Nomor WA Pelanggan tidak ditemukan.')->danger()->send();
+                            return;
+                        }
+                        
+                        $amount = number_format($record->amount, 0, ',', '.');
+                        $period = \Carbon\Carbon::parse($record->period)->translatedFormat('F Y');
+                        $status = $record->status->value;
+                        
+                        $msg = "Halo *{$record->customer->name}*,\n\nInformasi tagihan internet ARMEDIA Anda:\n- Periode: *{$period}*\n- Tagihan: *Rp {$amount}*\n- Status: *" . ($status === 'lunas' ? 'LUNAS ✅' : 'BELUM BAYAR ⏳') . "*\n\n" . ($status === 'lunas' ? "Terima kasih atas pembayaran Anda!" : "Mohon segera melakukan pembayaran untuk menghindari isolir jaringan. Terima kasih.");
+                        
+                        $success = \App\Services\WhatsAppService::sendMessage($phone, $msg);
+                        
+                        if ($success) {
+                            \Filament\Notifications\Notification::make()->title('Berhasil')->body('Notifikasi WA Tagihan telah terkirim!')->success()->send();
+                        } else {
+                            \Filament\Notifications\Notification::make()->title('Gagal')->body('Pastikan server WAHA aktif.')->danger()->send();
+                        }
+                    }),
+
                 Tables\Actions\Action::make('mark_paid')
                     ->label('Tandai Lunas')
                     ->icon('heroicon-o-check-circle')

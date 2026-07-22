@@ -15,7 +15,7 @@ class RadCheckResource extends Resource
     protected static ?string $model = RadCheck::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-wifi';
-    protected static ?string $navigationGroup = 'ISP Core';
+    protected static ?string $navigationGroup = 'Jaringan & Infrastruktur';
     protected static ?string $modelLabel = 'Radius User (PPPoE)';
     protected static ?string $pluralModelLabel = 'Radius Users';
 

@@ -18,7 +18,7 @@ class InternetPackageResource extends Resource
     protected static ?string $model = InternetPackage::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-wifi';
-    protected static ?string $navigationGroup = 'Operasional ISP';  // dipindah dari Konten Website
+    protected static ?string $navigationGroup = 'Pengaturan & Sistem';  // dipindah dari Konten Website
     protected static ?string $navigationLabel = 'Paket Internet';
     protected static ?string $pluralModelLabel = 'Paket Internet';
     protected static ?string $modelLabel = 'Paket Internet';

@@ -19,11 +19,11 @@ class RegistrationResource extends Resource
     protected static ?string $model = Registration::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-user-plus';
-    protected static ?string $navigationGroup = 'Operasional ISP'; // dipindah dari Layanan Pelanggan
+    protected static ?string $navigationGroup = 'Layanan & Pelanggan'; // dipindah dari Layanan Pelanggan
     protected static ?string $navigationLabel = 'Calon Pelanggan (PSB)';
     protected static ?string $pluralModelLabel = 'Calon Pelanggan';
     protected static ?string $modelLabel = 'Calon Pelanggan';
-    protected static ?int    $navigationSort = 1;
+    protected static ?int    $navigationSort = 2;
 
     public static function form(Form $form): Form
     {
@@ -172,6 +172,30 @@ class RegistrationResource extends Resource
                             'converted_customer_id' => $customer->id,
                             'pipeline_status'       => PipelineStatus::TERPASANG->value,
                         ]);
+
+                        // Give referral points if applicable
+                        if ($record->referral_id_arm && !$record->points_rewarded) {
+                            $referrerCustomer = Customer::where('id_arm', $record->referral_id_arm)->first();
+                            if ($referrerCustomer) {
+                                $referrerMember = \App\Models\AcrMember::firstOrCreate(
+                                    ['customer_id' => $referrerCustomer->id],
+                                    [
+                                        'id_pelanggan' => $referrerCustomer->id_arm,
+                                        'nama' => $referrerCustomer->name,
+                                        'whatsapp' => $referrerCustomer->whatsapp,
+                                    ]
+                                );
+
+                                \App\Models\AcrPointTransaction::create([
+                                    'id_member' => $referrerMember->id,
+                                    'jenis' => 'MASUK',
+                                    'jumlah_poin' => 50000,
+                                    'keterangan' => 'Bonus Referral: Pendaftaran ' . $customer->name,
+                                ]);
+                                
+                                $record->update(['points_rewarded' => true]);
+                            }
+                        }
 
                         Notification::make()
                             ->title('Berhasil dikonversi')

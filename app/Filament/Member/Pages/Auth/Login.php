@@ -34,6 +34,13 @@ class Login extends BaseLogin
         ];
     }
 
+    protected static string $view = 'filament.member.pages.auth.login';
+    
+    public function getLayout(): string
+    {
+        return 'filament-panels::components.layout.base';
+    }
+
     protected function throwFailureValidationException(): never
     {
         throw ValidationException::withMessages([

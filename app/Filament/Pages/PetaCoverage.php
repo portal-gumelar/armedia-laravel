@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use Filament\Pages\Page;
 use App\Models\Odp;
 use App\Models\Customer;
+use App\Models\CableRoute;
 
 class PetaCoverage extends Page
 {
@@ -63,5 +64,22 @@ class PetaCoverage extends Page
     public function getTotalCustomer(): int
     {
         return Customer::where('subscription_status', 'aktif')->count();
+    }
+
+    public function getRoutes(): \Illuminate\Support\Collection
+    {
+        return CableRoute::all()->map(function($route) {
+            $decoded = json_decode($route->polyline, true) ?? [];
+            if (is_string($decoded)) {
+                $decoded = json_decode($decoded, true) ?? [];
+            }
+            return [
+                'id' => $route->id,
+                'name' => $route->name,
+                'type' => $route->type,
+                'status' => $route->status,
+                'polyline' => $decoded,
+            ];
+        });
     }
 }

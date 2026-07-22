@@ -14,9 +14,9 @@ class NetwatchMonitoringResource extends Resource
 {
     protected static ?string $model = NetwatchMonitoring::class;
     protected static ?string $navigationIcon = 'heroicon-o-signal-slash';
-    protected static ?string $navigationGroup = 'Jaringan & Monitoring';
+    protected static ?string $navigationGroup = 'Jaringan & Infrastruktur';
     protected static ?string $navigationLabel = 'Monitoring Netwatch';
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 4;
 
     public static function form(Form $form): Form
     {

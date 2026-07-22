@@ -13,8 +13,8 @@ class WahaService
     public function __construct()
     {
         // Default internal url in coolify if missing
-        $this->url = env('WAHA_URL', 'http://waha:3000');
-        $this->session = env('WAHA_SESSION', 'default');
+        $this->url = config('services.waha.url', 'http://waha:3000');
+        $this->session = config('services.waha.session', 'default');
     }
 
     /**

@@ -18,7 +18,8 @@ class MikrotikServerResource extends Resource
     protected static ?string $model = MikrotikServer::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-server';
-    protected static ?string $navigationGroup = 'Pengaturan';
+    protected static ?string $navigationGroup = 'Jaringan & Infrastruktur';
+    protected static ?int $navigationSort = 5;
     protected static ?string $navigationLabel = 'Mikrotik Server';
     protected static ?string $modelLabel = 'Mikrotik Server';
 
@@ -114,6 +115,34 @@ class MikrotikServerResource extends Resource
                         } catch (\Exception $e) {
                             \Filament\Notifications\Notification::make()
                                 ->title('Koneksi Gagal')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
+                Tables\Actions\Action::make('deploy_security')
+                    ->label('Deploy Security Shield 🛡️')
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->modalHeading('Deploy Aturan Keamanan MikroTik')
+                    ->modalDescription('Aksi ini akan menyuntikkan (inject) aturan Firewall ke MikroTik untuk memblokir serangan FTP/SSH Brute Force dan paket invalid. Lanjutkan?')
+                    ->action(function (MikrotikServer $record) {
+                        try {
+                            $mtService = new \App\Services\MikrotikService();
+                            $success = $mtService->deploySecurityRules($record);
+                            
+                            if ($success) {
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Security Shield Aktif!')
+                                    ->body("Aturan Firewall berhasil ditambahkan ke router {$record->name}.")
+                                    ->success()
+                                    ->send();
+                            } else {
+                                throw new \Exception("Gagal menyuntikkan firewall rules. Pastikan koneksi API MikroTik aktif.");
+                            }
+                        } catch (\Exception $e) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Gagal Deploy Security')
                                 ->body($e->getMessage())
                                 ->danger()
                                 ->send();

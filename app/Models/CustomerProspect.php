@@ -9,6 +9,8 @@ class CustomerProspect extends Model
     protected $fillable = [
         'no_laporan', 'nama_pelanggan', 'nomor_telepon', 'alamat_pemasangan',
         'jadwal_pasang', 'jenis_layanan', 'status', 'marketing',
+        'link_map',
+        'foto_ktp',
     ];
 
     protected $casts = [

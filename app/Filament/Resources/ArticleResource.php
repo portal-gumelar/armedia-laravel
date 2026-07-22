@@ -15,7 +15,7 @@ class ArticleResource extends Resource
     protected static ?string $model = Article::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
-    protected static ?string $navigationGroup = 'Konten Website';
+    protected static ?string $navigationGroup = 'Pengaturan & Sistem';
     protected static ?string $navigationLabel = 'Artikel & Berita';
     protected static ?string $pluralModelLabel = 'Artikel & Berita';
     protected static ?string $modelLabel = 'Artikel';

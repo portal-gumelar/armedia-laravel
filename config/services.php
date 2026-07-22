@@ -35,4 +35,22 @@ return [
         ],
     ],
 
+    'waha' => [
+        'endpoint' => env('WAHA_ENDPOINT', 'https://waha.armedia.id'),
+        'url'      => env('WAHA_URL', 'http://waha:3000'), // Kept for backward compatibility
+        'session'  => env('WAHA_SESSION', 'default'),
+    ],
+
+    'armedia' => [
+        'cs_wa' => env('ARMEDIA_CS_WA', '628xxxxxxxxxx'),
+        'cs_phone' => env('ARMEDIA_CS_PHONE', '0812-XXXX-XXXX'),
+        'billing_reminder_day' => env('BILLING_REMINDER_DAY', 7),
+    ],
+
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'chat_id' => env('TELEGRAM_CHAT_ID'),
+        'webhook_url' => env('TELEGRAM_WEBHOOK_URL'),
+    ],
+
 ];
