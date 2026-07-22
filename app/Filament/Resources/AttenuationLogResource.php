@@ -18,7 +18,7 @@ class AttenuationLogResource extends Resource
     protected static ?string $model = AttenuationLog::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-chart-bar';
-    protected static ?string $navigationGroup = 'Jaringan & Infrastruktur';
+    protected static ?string $navigationGroup = 'Jaringan & Monitoring';
     protected static ?string $navigationLabel = 'Log Redaman ODP';
     protected static ?string $modelLabel = 'Log Redaman';
     protected static ?string $pluralModelLabel = 'Log Redaman ODP';
@@ -29,7 +29,7 @@ class AttenuationLogResource extends Resource
         return $form
             ->schema([
                 Forms\Components\Select::make('customer_id')
-                    ->relationship('customer', 'nama')
+                    ->relationship('customer', 'name')
                     ->searchable()
                     ->required(),
                 Forms\Components\DatePicker::make('tanggal_ukur')
@@ -55,7 +55,7 @@ class AttenuationLogResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('customer.nama')
+                Tables\Columns\TextColumn::make('customer.name')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('tanggal_ukur')

@@ -18,7 +18,7 @@ class CableRouteResource extends Resource
     protected static ?string $model = CableRoute::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-arrows-pointing-out';
-    protected static ?string $navigationGroup = 'Jaringan & Infrastruktur';
+    protected static ?string $navigationGroup = 'Jaringan & Monitoring';
     protected static ?string $navigationLabel = 'Jalur Kabel';
     protected static ?string $modelLabel = 'Jalur Kabel';
     protected static ?string $pluralModelLabel = 'Jalur Kabel';
