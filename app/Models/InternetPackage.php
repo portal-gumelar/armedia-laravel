@@ -48,4 +48,9 @@ class InternetPackage extends Model
     {
         return $this->hasMany(Customer::class);
     }
+
+    public function prorataRates(): HasMany
+    {
+        return $this->hasMany(ProrataRate::class, 'product_id');
+    }
 }

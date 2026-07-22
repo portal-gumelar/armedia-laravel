@@ -29,14 +29,22 @@ class ProrataRateResource extends Resource
         return $form
             ->schema([
                 Forms\Components\TextInput::make('tanggal_pasang')
+                    ->label('Tanggal Pasang (1-31)')
                     ->required()
-                    ->numeric(),
+                    ->numeric()
+                    ->minValue(1)
+                    ->maxValue(31),
                 Forms\Components\Select::make('product_id')
-                    ->relationship('product', 'id')
+                    ->label('Paket Internet')
+                    ->relationship('product', 'nama_paket')
+                    ->searchable()
+                    ->preload()
                     ->required(),
                 Forms\Components\TextInput::make('jumlah')
+                    ->label('Tarif Prorata (Rp)')
                     ->required()
-                    ->numeric(),
+                    ->numeric()
+                    ->prefix('Rp'),
             ]);
     }
 
@@ -45,13 +53,16 @@ class ProrataRateResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('tanggal_pasang')
+                    ->label('Tgl Pasang')
                     ->numeric()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('product.id')
-                    ->numeric()
+                Tables\Columns\TextColumn::make('product.nama_paket')
+                    ->label('Paket Internet')
+                    ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('jumlah')
-                    ->numeric()
+                    ->label('Tarif Prorata')
+                    ->money('IDR')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
