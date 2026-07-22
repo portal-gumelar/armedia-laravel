@@ -10,11 +10,13 @@ class MidtransPaymentService
 {
     public function __construct()
     {
-        Config::$serverKey    = config('midtrans.server_key');
-        Config::$clientKey    = config('midtrans.client_key');
-        Config::$isProduction = config('midtrans.is_production');
-        Config::$isSanitized  = config('midtrans.is_sanitized');
-        Config::$is3ds        = config('midtrans.is_3ds');
+        $settings = app(\App\Settings\PaymentSettings::class);
+        Config::$serverKey    = $settings->midtrans_server_key;
+        Config::$clientKey    = $settings->midtrans_client_key;
+        Config::$isProduction = $settings->midtrans_is_production;
+        
+        Config::$isSanitized  = true; // Always sanitized
+        Config::$is3ds        = true; // Always 3ds
     }
 
     /**
@@ -70,7 +72,7 @@ class MidtransPaymentService
         try {
             $snapToken = Snap::getSnapToken($params);
 
-            $baseUrl = config('midtrans.is_production')
+            $baseUrl = Config::$isProduction
                 ? 'https://app.midtrans.com/snap/v2/vtweb/'
                 : 'https://app.sandbox.midtrans.com/snap/v2/vtweb/';
 

@@ -18,7 +18,7 @@ class MikrotikServerResource extends Resource
     protected static ?string $model = MikrotikServer::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-server';
-    protected static ?string $navigationGroup = 'Jaringan & Infrastruktur';
+    protected static ?string $navigationGroup = 'Jaringan & Monitoring';
     protected static ?int $navigationSort = 5;
     protected static ?string $navigationLabel = 'Mikrotik Server';
     protected static ?string $modelLabel = 'Mikrotik Server';

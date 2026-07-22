@@ -35,7 +35,7 @@ class MidtransWebhookController extends Controller
         }
 
         // 2. Validasi Signature Key (SHA512)
-        $serverKey = config('midtrans.server_key');
+        $serverKey = app(\App\Settings\PaymentSettings::class)->midtrans_server_key;
         $expectedSignature = hash('sha512', $orderId . $statusCode . $grossAmount . $serverKey);
         
         if ($expectedSignature !== $signatureKey) {
