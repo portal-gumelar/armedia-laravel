@@ -33,11 +33,6 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\Customer::observe(\App\Observers\CustomerObserver::class);
         Vite::prefetch(concurrency: 3);
 
-        // Memaksa skema HTTPS jika di production (mencegah Method Not Allowed di Filament / Coolify)
-        if (app()->environment('production')) {
-            \Illuminate\Support\Facades\URL::forceScheme('https');
-        }
-
         // Inject Premium Glassmorphism CSS for Filament UI
         FilamentView::registerRenderHook(
             PanelsRenderHook::HEAD_END,
