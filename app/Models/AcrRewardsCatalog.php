@@ -11,4 +11,5 @@ class AcrRewardsCatalog extends Model
     use HasFactory;
 
     protected $table = 'acr_rewards_catalog';
+    protected $guarded = [];
 }
