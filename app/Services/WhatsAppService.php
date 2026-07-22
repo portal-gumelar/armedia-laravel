@@ -17,12 +17,13 @@ class WhatsAppService
      */
     public static function sendMessage(string $phone, string $message, ?string $fileUrl = null): bool
     {
-        $endpoint = config('services.waha.endpoint');
-        $session  = config('services.waha.session');
+        $settings = app(\App\Settings\WhatsappSettings::class);
+        $endpoint = $settings->waha_endpoint;
+        $session  = $settings->waha_session;
         
         // Cek apakah WAHA diaktifkan
-        if (!$endpoint) {
-            Log::warning('WhatsAppService: WAHA_ENDPOINT is not set in .env');
+        if (!$settings->is_active || !$endpoint) {
+            Log::warning('WhatsAppService: WAHA is not active or endpoint not set in settings.');
             return false;
         }
 
