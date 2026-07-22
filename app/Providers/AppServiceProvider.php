@@ -31,6 +31,7 @@ class AppServiceProvider extends ServiceProvider
         AcrPointTransaction::observe(AcrPointTransactionObserver::class);
         AcrRedemption::observe(AcrRedemptionObserver::class);
         \App\Models\Customer::observe(\App\Observers\CustomerObserver::class);
+        \App\Models\VpnAccount::observe(\App\Observers\VpnAccountObserver::class);
         Vite::prefetch(concurrency: 3);
 
         // Beri akses penuh ke super_admin (Bypass semua permission policy)
