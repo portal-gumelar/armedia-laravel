@@ -22,6 +22,25 @@ class WhatsappGatewaySettings extends Page implements HasForms
 
     public ?array $data = [];
 
+    protected function getHeaderActions(): array
+    {
+        return [
+            \Filament\Actions\Action::make('scanQr')
+                ->label('Scan Barcode WA')
+                ->icon('heroicon-o-qr-code')
+                ->color('success')
+                ->modalHeading('Tautkan Perangkat WhatsApp')
+                ->modalDescription('Buka WhatsApp di HP Anda > Titik Tiga > Perangkat Tautkan > Scan Barcode ini.')
+                ->modalContent(fn () => view('filament.pages.actions.scan-waha-qr', [
+                    'endpoint' => app(WhatsappSettings::class)->waha_endpoint,
+                    'session'  => app(WhatsappSettings::class)->waha_session,
+                ]))
+                ->modalSubmitAction(false)
+                ->modalCancelActionLabel('Tutup')
+                ->visible(fn () => !empty(app(WhatsappSettings::class)->waha_endpoint) && app(WhatsappSettings::class)->is_active),
+        ];
+    }
+
     public function mount(): void
     {
         $settings = app(WhatsappSettings::class);
