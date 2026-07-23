@@ -25,43 +25,55 @@ class VpnAccountResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Select::make('vpn_server_id')
-                    ->relationship('vpnServer', 'name')
-                    ->searchable()
-                    ->required(),
-                Forms\Components\Select::make('customer_id')
-                    ->relationship('customer', 'name')
-                    ->searchable()
-                    ->label('Pelanggan (Opsional)'),
-                Forms\Components\Select::make('mikrotik_server_id')
-                    ->relationship('mikrotikServer', 'name')
-                    ->searchable()
-                    ->label('Internal MikroTik (Opsional)'),
-                Forms\Components\TextInput::make('username')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('password')
-                    ->required()
-                    ->maxLength(255)
-                    ->password()
-                    ->revealable(),
-                Forms\Components\TextInput::make('ip_lokal')
-                    ->label('IP Lokal yang didapat (Remote Address)')
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('port_forwarding')
-                    ->numeric(),
-                Forms\Components\Select::make('vpn_type')
-                    ->options([
-                        'l2tp' => 'L2TP/IPSec',
-                        'sstp' => 'SSTP',
-                        'wireguard' => 'WireGuard',
-                    ])
-                    ->required()
-                    ->default('l2tp'),
-                Forms\Components\Toggle::make('is_active')
-                    ->required()
-                    ->default(true),
-                Forms\Components\DateTimePicker::make('expired_at'),
+                Forms\Components\Section::make('Informasi Akun VPN Remote')
+                    ->schema([
+                        Forms\Components\Select::make('vpn_server_id')
+                            ->relationship('vpnServer', 'name')
+                            ->searchable()
+                            ->label('Server VPN Induk')
+                            ->required(),
+                        Forms\Components\Select::make('customer_id')
+                            ->relationship('customer', 'name')
+                            ->searchable()
+                            ->label('Untuk Pelanggan (Opsional)'),
+                        Forms\Components\Select::make('mikrotik_server_id')
+                            ->relationship('mikrotikServer', 'name')
+                            ->searchable()
+                            ->label('Untuk Server MikroTik (Opsional)'),
+                        Forms\Components\TextInput::make('username')
+                            ->label('Username VPN')
+                            ->required()
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('password')
+                            ->label('Password VPN')
+                            ->required()
+                            ->maxLength(255)
+                            ->password()
+                            ->revealable(),
+                        Forms\Components\TextInput::make('ip_lokal')
+                            ->label('IP Lokal yang didapat (Remote Address)')
+                            ->placeholder('Contoh: 10.10.10.2')
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('port_forwarding')
+                            ->label('Port Forwarding (Opsional)')
+                            ->numeric(),
+                        Forms\Components\Select::make('vpn_type')
+                            ->label('Tipe VPN')
+                            ->options([
+                                'l2tp' => 'L2TP/IPSec',
+                                'sstp' => 'SSTP',
+                                'wireguard' => 'WireGuard',
+                            ])
+                            ->required()
+                            ->default('l2tp'),
+                        Forms\Components\DateTimePicker::make('expired_at')
+                            ->label('Berlaku Sampai (Expired)'),
+                        Forms\Components\Toggle::make('is_active')
+                            ->label('Status Aktif')
+                            ->required()
+                            ->default(true)
+                            ->columnSpanFull(),
+                    ])->columns(2),
             ]);
     }
 
