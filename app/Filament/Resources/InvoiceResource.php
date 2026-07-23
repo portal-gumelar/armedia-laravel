@@ -150,10 +150,30 @@ class InvoiceResource extends Resource
                     ->color('success')
                     ->requiresConfirmation()
                     ->visible(fn ($record) => $record->status !== InvoiceStatus::LUNAS)
-                    ->action(fn ($record) => $record->update([
-                        'status'  => InvoiceStatus::LUNAS->value,
-                        'paid_at' => now()->toDateString(),
-                    ])),
+                    ->action(function ($record, \Filament\Notifications\Notification $notification) {
+                        $record->update([
+                            'status'  => InvoiceStatus::LUNAS->value,
+                            'paid_at' => now()->toDateString(),
+                        ]);
+
+                        // Auto Buka Isolir jika pelanggan sebelumnya diisolir
+                        $customer = $record->customer;
+                        if ($customer && $customer->subscription_status === 'isolir') {
+                            $mtService = new \App\Services\MikrotikService();
+                            $mtService->unisolateCustomer($customer);
+                            $customer->update(['subscription_status' => 'aktif']);
+                            
+                            $notification->title('Pembayaran Berhasil')
+                                ->body('Faktur lunas dan koneksi internet pelanggan (Mikrotik) otomatis diaktifkan kembali.')
+                                ->success()
+                                ->send();
+                        } else {
+                            $notification->title('Pembayaran Berhasil')
+                                ->body('Faktur berhasil ditandai lunas.')
+                                ->success()
+                                ->send();
+                        }
+                    }),
                 Tables\Actions\Action::make('kirimWa')
                     ->label('Kirim WA')
                     ->icon('heroicon-o-chat-bubble-oval-left-ellipsis')
