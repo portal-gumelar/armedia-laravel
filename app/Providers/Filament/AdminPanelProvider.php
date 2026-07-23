@@ -31,7 +31,7 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogo('/images/logo-armedia.png')
             ->brandLogoHeight('2.5rem')
             ->colors([
-                'primary' => Color::Red, // ARMEDIA branding
+                'primary' => Color::Sky, // Soft and calm branding
                 'danger'  => Color::Rose,
                 'gray'    => Color::Slate,
                 'info'    => Color::Blue,
