@@ -28,35 +28,38 @@ class MonthlyBillResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Select::make('customer_id')
-                    ->label('Pelanggan')
-                    ->relationship('customer', 'name')
-                    ->searchable()
-                    ->preload()
-                    ->required(),
-                Forms\Components\TextInput::make('tahun')
-                    ->label('Tahun')
-                    ->required()
-                    ->numeric()
-                    ->default(now()->year),
-                Forms\Components\Select::make('bulan')
-                    ->label('Bulan')
-                    ->options([
-                        1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
-                        5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
-                        9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember',
-                    ])
-                    ->required(),
-                Forms\Components\TextInput::make('jumlah')
-                    ->label('Jumlah (Rp)')
-                    ->required()
-                    ->numeric()
-                    ->prefix('Rp')
-                    ->default(0),
-                Forms\Components\TextInput::make('harga_acuan_snapshot')
-                    ->label('Harga Acuan (Rp)')
-                    ->prefix('Rp')
-                    ->numeric(),
+                Forms\Components\Section::make('Informasi Tagihan')
+                    ->schema([
+                        Forms\Components\Select::make('customer_id')
+                            ->label('Pelanggan')
+                            ->relationship('customer', 'name')
+                            ->searchable()
+                            ->preload()
+                            ->required(),
+                        Forms\Components\TextInput::make('tahun')
+                            ->label('Tahun')
+                            ->required()
+                            ->numeric()
+                            ->default(now()->year),
+                        Forms\Components\Select::make('bulan')
+                            ->label('Bulan')
+                            ->options([
+                                1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+                                5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+                                9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember',
+                            ])
+                            ->required(),
+                        Forms\Components\TextInput::make('jumlah')
+                            ->label('Jumlah Tagihan')
+                            ->required()
+                            ->numeric()
+                            ->prefix('Rp')
+                            ->default(0),
+                        Forms\Components\TextInput::make('harga_acuan_snapshot')
+                            ->label('Harga Acuan (Snapshot)')
+                            ->prefix('Rp')
+                            ->numeric(),
+                    ])->columns(2),
             ]);
     }
 
