@@ -24,40 +24,48 @@ class InstallationTaskResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('task_no')
-                    ->label('Nomor Tugas')
-                    ->disabled()
-                    ->dehydrated(false),
-                Forms\Components\Select::make('customer_id')
-                    ->label('Pelanggan Baru (Prospek)')
-                    ->relationship('customer', 'name')
-                    ->searchable()
-                    ->preload(),
-                Forms\Components\TextInput::make('title')
-                    ->label('Judul Tugas')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\Select::make('status')
-                    ->label('Status')
-                    ->options([
-                        'survey' => 'Survey',
-                        'kabel' => 'Tarik Kabel',
-                        'aktivasi' => 'Aktivasi OLT/MikroTik',
-                        'selesai' => 'Selesai',
-                        'batal' => 'Batal',
-                    ])
-                    ->default('survey')
-                    ->required(),
-                Forms\Components\Select::make('assigned_to')
-                    ->label('Ditugaskan Ke (Teknisi)')
-                    ->relationship('assignee', 'name')
-                    ->searchable()
-                    ->preload(),
-                Forms\Components\DateTimePicker::make('scheduled_at')
-                    ->label('Jadwal Pelaksanaan'),
-                Forms\Components\Textarea::make('description')
-                    ->label('Deskripsi / Catatan')
-                    ->columnSpanFull(),
+                Forms\Components\Section::make('Detail Tugas Instalasi')
+                    ->schema([
+                        Forms\Components\TextInput::make('task_no')
+                            ->label('Nomor Tugas')
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->columnSpan(2),
+                        Forms\Components\Select::make('customer_id')
+                            ->label('Pelanggan Baru (Prospek)')
+                            ->relationship('customer', 'name')
+                            ->searchable()
+                            ->preload()
+                            ->columnSpan(2),
+                        Forms\Components\TextInput::make('title')
+                            ->label('Judul Tugas')
+                            ->required()
+                            ->maxLength(255)
+                            ->columnSpan(2),
+                        Forms\Components\Select::make('status')
+                            ->label('Status')
+                            ->options([
+                                'survey' => 'Survey',
+                                'kabel' => 'Tarik Kabel',
+                                'aktivasi' => 'Aktivasi OLT/MikroTik',
+                                'selesai' => 'Selesai',
+                                'batal' => 'Batal',
+                            ])
+                            ->default('survey')
+                            ->required(),
+                        Forms\Components\Select::make('assigned_to')
+                            ->label('Ditugaskan Ke (Teknisi)')
+                            ->relationship('assignee', 'name')
+                            ->searchable()
+                            ->preload(),
+                        Forms\Components\DateTimePicker::make('scheduled_at')
+                            ->label('Jadwal Pelaksanaan')
+                            ->columnSpan(2),
+                        Forms\Components\Textarea::make('description')
+                            ->label('Deskripsi / Catatan')
+                            ->columnSpan(2)
+                            ->rows(4),
+                    ])->columns(2),
             ]);
     }
 
