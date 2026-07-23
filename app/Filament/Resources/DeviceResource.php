@@ -28,36 +28,39 @@ class DeviceResource extends Resource
     public static function form(Form $form): Form
     {
         return $form->schema([
-            Forms\Components\TextInput::make('device_code')
-                ->label('Kode Perangkat')
-                ->required()
-                ->unique(ignoreRecord: true)
-                ->placeholder('PG-1522602001'),
-            Forms\Components\TextInput::make('name')
-                ->label('Nama Perangkat')
-                ->required()
-                ->default('XPON ONT'),
-            Forms\Components\TextInput::make('model')
-                ->label('Model')
-                ->placeholder('F680C'),
-            Forms\Components\TextInput::make('serial_number')
-                ->label('Serial Number')
-                ->unique(ignoreRecord: true)
-                ->placeholder('HWTCXXXXXXXX'),
-            Forms\Components\TextInput::make('batch_month_year')
-                ->label('Batch (Bulan-Tahun)')
-                ->placeholder('2023-06'),
-            Forms\Components\Select::make('status')
-                ->label('Status')
-                ->options(DeviceStatus::class)
-                ->required()
-                ->default(DeviceStatus::STOK->value),
-            Forms\Components\Select::make('customer_id')
-                ->label('Pelanggan')
-                ->relationship('customer', 'name')
-                ->searchable()
-                ->preload()
-                ->nullable(),
+            Forms\Components\Section::make('Informasi Perangkat ONT')
+                ->schema([
+                    Forms\Components\TextInput::make('device_code')
+                        ->label('Kode Perangkat')
+                        ->required()
+                        ->unique(ignoreRecord: true)
+                        ->placeholder('Contoh: PG-1522602001'),
+                    Forms\Components\TextInput::make('name')
+                        ->label('Nama Perangkat')
+                        ->required()
+                        ->default('XPON ONT'),
+                    Forms\Components\TextInput::make('model')
+                        ->label('Model')
+                        ->placeholder('Contoh: F680C'),
+                    Forms\Components\TextInput::make('serial_number')
+                        ->label('Serial Number (SN)')
+                        ->unique(ignoreRecord: true)
+                        ->placeholder('Contoh: HWTCXXXXXXXX'),
+                    Forms\Components\TextInput::make('batch_month_year')
+                        ->label('Batch (Bulan-Tahun)')
+                        ->placeholder('Contoh: 2023-06'),
+                    Forms\Components\Select::make('status')
+                        ->label('Status Perangkat')
+                        ->options(DeviceStatus::class)
+                        ->required()
+                        ->default(DeviceStatus::STOK->value),
+                    Forms\Components\Select::make('customer_id')
+                        ->label('Pemilik / Pelanggan')
+                        ->relationship('customer', 'name')
+                        ->searchable()
+                        ->preload()
+                        ->nullable(),
+                ])->columns(2),
         ]);
     }
 
