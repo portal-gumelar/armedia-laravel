@@ -29,33 +29,43 @@ class InternetPackageResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('nama_paket')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('kecepatan')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('harga')
-                    ->required()
-                    ->numeric(),
-                Forms\Components\TextInput::make('keterangan_promo')
-                    ->maxLength(255),
-                Forms\Components\Toggle::make('is_active')
-                    ->required(),
-                // ── Field ISP tambahan ──────────────────────────────────
-                Forms\Components\TextInput::make('code')
-                    ->label('Kode Paket')
-                    ->unique(ignoreRecord: true)
-                    ->placeholder('AR-2, HR-11'),
-                Forms\Components\Select::make('brand')
-                    ->label('Brand')
-                    ->options(\App\Enums\PackageBrand::class),
-                Forms\Components\TextInput::make('speed_mbps')
-                    ->label('Kecepatan (Mbps)')
-                    ->numeric(),
-                Forms\Components\TextInput::make('ip_allocation')
-                    ->label('Alokasi IP')
-                    ->placeholder('10.152.6-10.152.7'),
+                Forms\Components\Section::make('Informasi Paket Internet')
+                    ->schema([
+                        Forms\Components\TextInput::make('code')
+                            ->label('Kode Paket')
+                            ->unique(ignoreRecord: true)
+                            ->placeholder('Contoh: AR-2, HR-11'),
+                        Forms\Components\TextInput::make('nama_paket')
+                            ->label('Nama Paket')
+                            ->required()
+                            ->maxLength(255),
+                        Forms\Components\Select::make('brand')
+                            ->label('Brand / Kategori')
+                            ->options(\App\Enums\PackageBrand::class),
+                        Forms\Components\TextInput::make('kecepatan')
+                            ->label('Label Kecepatan')
+                            ->placeholder('Contoh: Upto 30 Mbps')
+                            ->required()
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('speed_mbps')
+                            ->label('Kecepatan Asli (Mbps)')
+                            ->numeric()
+                            ->placeholder('30'),
+                        Forms\Components\TextInput::make('harga')
+                            ->label('Harga (Rp)')
+                            ->required()
+                            ->numeric(),
+                        Forms\Components\TextInput::make('ip_allocation')
+                            ->label('Alokasi IP Range')
+                            ->placeholder('Contoh: 10.152.6-10.152.7'),
+                        Forms\Components\TextInput::make('keterangan_promo')
+                            ->label('Keterangan / Promo')
+                            ->maxLength(255),
+                        Forms\Components\Toggle::make('is_active')
+                            ->label('Status Aktif')
+                            ->default(true)
+                            ->required(),
+                    ])->columns(2),
             ]);
     }
 
