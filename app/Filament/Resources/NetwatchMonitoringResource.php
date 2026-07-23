@@ -21,14 +21,31 @@ class NetwatchMonitoringResource extends Resource
     public static function form(Form $form): Form
     {
         return $form->schema([
-            Forms\Components\TextInput::make('ip_address')->required()->unique(ignoreRecord: true),
-            Forms\Components\Select::make('status_koneksi')->options(['UP' => 'UP', 'DOWN' => 'DOWN']),
-            Forms\Components\Select::make('customer_id')->relationship('customer', 'nama')->searchable()->label('Pelanggan'),
-            Forms\Components\TextInput::make('desa'),
-            Forms\Components\TextInput::make('rw_rt'),
-            Forms\Components\TextInput::make('paket_mbps')->numeric(),
-            Forms\Components\TextInput::make('status_berlangganan'),
-        ])->columns(2);
+            Forms\Components\Section::make('Data Monitoring Netwatch')
+                ->schema([
+                    Forms\Components\TextInput::make('ip_address')
+                        ->label('IP Address')
+                        ->required()
+                        ->unique(ignoreRecord: true),
+                    Forms\Components\Select::make('status_koneksi')
+                        ->label('Status Koneksi')
+                        ->options(['UP' => 'UP', 'DOWN' => 'DOWN']),
+                    Forms\Components\Select::make('customer_id')
+                        ->relationship('customer', 'name')
+                        ->searchable()
+                        ->preload()
+                        ->label('Pelanggan'),
+                    Forms\Components\TextInput::make('desa')
+                        ->label('Desa'),
+                    Forms\Components\TextInput::make('rw_rt')
+                        ->label('RT/RW'),
+                    Forms\Components\TextInput::make('paket_mbps')
+                        ->label('Paket (Mbps)')
+                        ->numeric(),
+                    Forms\Components\TextInput::make('status_berlangganan')
+                        ->label('Status Berlangganan'),
+                ])->columns(2),
+        ]);
     }
 
     public static function table(Table $table): Table
