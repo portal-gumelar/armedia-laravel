@@ -83,6 +83,25 @@ class CsrReport extends Page implements HasForms
                         ->send();
                 }),
 
+            Action::make('download_pdf')
+                ->label('Download PDF (Kop Surat)')
+                ->icon('heroicon-o-document-arrow-down')
+                ->color('success')
+                ->action(function () {
+                    $periodLabel = $this->getPeriodLabel();
+                    $data = $this->getLiveDataByVillage();
+                    
+                    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.csr-report', [
+                        'periodLabel' => $periodLabel,
+                        'data' => $data,
+                        'datePrinted' => now()->translatedFormat('d F Y')
+                    ]);
+                    
+                    return response()->streamDownload(function () use ($pdf) {
+                        echo $pdf->output();
+                    }, "Laporan-CSR-{$this->selectedYear}-{$this->selectedMonth}.pdf");
+                }),
+
             Action::make('print')
                 ->label('Cetak / Print')
                 ->icon('heroicon-o-printer')
