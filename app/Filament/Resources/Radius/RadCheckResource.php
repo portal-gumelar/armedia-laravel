@@ -23,27 +23,30 @@ class RadCheckResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('username')
-                    ->label('PPPoE Username')
-                    ->required()
-                    ->maxLength(64)
-                    ->unique(ignoreRecord: true),
-                Forms\Components\TextInput::make('attribute')
-                    ->label('Attribute')
-                    ->default('Cleartext-Password')
-                    ->required()
-                    ->maxLength(64),
-                Forms\Components\TextInput::make('op')
-                    ->label('Operator')
-                    ->default(':=')
-                    ->required()
-                    ->maxLength(2),
-                Forms\Components\TextInput::make('value')
-                    ->label('Password')
-                    ->password()
-                    ->revealable()
-                    ->required()
-                    ->maxLength(253),
+                Forms\Components\Section::make('Kredensial PPPoE (FreeRADIUS)')
+                    ->schema([
+                        Forms\Components\TextInput::make('username')
+                            ->label('PPPoE Username')
+                            ->required()
+                            ->maxLength(64)
+                            ->unique(ignoreRecord: true),
+                        Forms\Components\TextInput::make('value')
+                            ->label('Password')
+                            ->password()
+                            ->revealable()
+                            ->required()
+                            ->maxLength(253),
+                        Forms\Components\TextInput::make('attribute')
+                            ->label('Attribute')
+                            ->default('Cleartext-Password')
+                            ->required()
+                            ->maxLength(64),
+                        Forms\Components\TextInput::make('op')
+                            ->label('Operator')
+                            ->default(':=')
+                            ->required()
+                            ->maxLength(2),
+                    ])->columns(2),
             ]);
     }
 
