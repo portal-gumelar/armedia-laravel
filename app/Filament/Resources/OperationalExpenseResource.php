@@ -28,43 +28,46 @@ class OperationalExpenseResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('nota')
-                    ->label('Nomor Nota / Bukti')
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('operasional')
-                    ->label('Keterangan Operasional')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\Grid::make(3)
+                Forms\Components\Section::make('Detail Pengeluaran')
                     ->schema([
-                        Forms\Components\TextInput::make('qty')
-                            ->label('Kuantitas (Qty)')
-                            ->numeric()
-                            ->default(1)
-                            ->live(onBlur: true)
-                            ->afterStateUpdated(function ($state, Forms\Set $set, Forms\Get $get) {
-                                $harga = (float) $get('harga_satuan');
-                                $qty = (float) $state;
-                                $set('total_harga', $harga * $qty);
-                            }),
-                        Forms\Components\TextInput::make('harga_satuan')
-                            ->label('Harga Satuan')
+                        Forms\Components\TextInput::make('nota')
+                            ->label('Nomor Nota / Bukti')
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('operasional')
+                            ->label('Keterangan Operasional')
                             ->required()
-                            ->numeric()
-                            ->prefix('Rp')
-                            ->default(0)
-                            ->live(onBlur: true)
-                            ->afterStateUpdated(function ($state, Forms\Set $set, Forms\Get $get) {
-                                $qty = (float) $get('qty');
-                                $harga = (float) $state;
-                                $set('total_harga', $harga * $qty);
-                            }),
-                        Forms\Components\TextInput::make('total_harga')
-                            ->label('Total Harga')
-                            ->required()
-                            ->numeric()
-                            ->prefix('Rp')
-                            ->default(0),
+                            ->maxLength(255),
+                        Forms\Components\Grid::make(3)
+                            ->schema([
+                                Forms\Components\TextInput::make('qty')
+                                    ->label('Kuantitas (Qty)')
+                                    ->numeric()
+                                    ->default(1)
+                                    ->live(onBlur: true)
+                                    ->afterStateUpdated(function ($state, Forms\Set $set, Forms\Get $get) {
+                                        $harga = (float) $get('harga_satuan');
+                                        $qty = (float) $state;
+                                        $set('total_harga', $harga * $qty);
+                                    }),
+                                Forms\Components\TextInput::make('harga_satuan')
+                                    ->label('Harga Satuan')
+                                    ->required()
+                                    ->numeric()
+                                    ->prefix('Rp')
+                                    ->default(0)
+                                    ->live(onBlur: true)
+                                    ->afterStateUpdated(function ($state, Forms\Set $set, Forms\Get $get) {
+                                        $qty = (float) $get('qty');
+                                        $harga = (float) $state;
+                                        $set('total_harga', $harga * $qty);
+                                    }),
+                                Forms\Components\TextInput::make('total_harga')
+                                    ->label('Total Harga')
+                                    ->required()
+                                    ->numeric()
+                                    ->prefix('Rp')
+                                    ->default(0),
+                            ]),
                     ]),
             ]);
     }
